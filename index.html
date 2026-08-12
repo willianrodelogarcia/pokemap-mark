@@ -1,0 +1,1258 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Marcador de rutas</title>
+<style>
+  :root{
+    --ink:#2b2420;
+    --paper:#efe9de;
+    --panel:#dcd3c1;
+    --panel-edge:#c3b89f;
+    --red:#c0392b;
+    --red-soft:#e8a89c;
+    --accent:#8a6d3b;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family: "Courier New", ui-monospace, monospace;
+    min-height:100vh;
+  }
+  .wrap{
+    max-width:980px;
+    margin:0 auto;
+    padding:28px 18px 60px;
+  }
+  header{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    border-bottom:3px solid var(--ink);
+    padding-bottom:10px;
+    margin-bottom:20px;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  h1{
+    font-size:1.3rem;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    margin:0;
+  }
+  .tag{
+    font-size:.75rem;
+    color:var(--accent);
+    letter-spacing:.05em;
+  }
+  .stage{
+    background:var(--panel);
+    border:2px solid var(--panel-edge);
+    border-radius:4px;
+    padding:16px;
+    position:relative;
+  }
+  .dropzone{
+    border:2px dashed var(--panel-edge);
+    border-radius:4px;
+    min-height:340px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    color:var(--accent);
+    cursor:pointer;
+    padding:20px;
+    transition:background .15s;
+  }
+  .dropzone.drag{ background:#eadfc4; }
+  .dropzone p{ max-width:340px; line-height:1.5; }
+  .canvas-holder{
+    position:relative;
+    display:inline-block;
+    max-width:100%;
+    line-height:0;
+  }
+  canvas{
+    max-width:100%;
+    display:block;
+    touch-action:none;
+    cursor:crosshair;
+    border-radius:2px;
+  }
+  #draw.move-mode{ cursor:grab; }
+  #draw.move-mode.dragging{ cursor:grabbing; }
+  #base{ position:relative; z-index:1; border:1px solid var(--panel-edge); }
+  #draw{ position:absolute; top:0; left:0; z-index:2; }
+  #draw.blink{
+    animation: blink-pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes blink-pulse{
+    0%, 100% { opacity:1; filter: drop-shadow(0 0 6px rgba(192,57,43,.9)); }
+    50%      { opacity:.15; filter: drop-shadow(0 0 0 rgba(192,57,43,0)); }
+  }
+  @media (prefers-reduced-motion: reduce){
+    #draw.blink{ animation: none; opacity:1; }
+  }
+
+  .toolbar{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    align-items:center;
+    margin-top:16px;
+    background:var(--panel);
+    border:2px solid var(--panel-edge);
+    border-radius:4px;
+    padding:12px 14px;
+  }
+  .group{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:.8rem;
+  }
+  .divider{
+    width:1px;
+    align-self:stretch;
+    background:var(--panel-edge);
+  }
+  button, .filebtn{
+    font-family:inherit;
+    font-size:.8rem;
+    letter-spacing:.03em;
+    text-transform:uppercase;
+    background:var(--ink);
+    color:var(--paper);
+    border:none;
+    border-radius:3px;
+    padding:8px 12px;
+    cursor:pointer;
+  }
+  button:hover, .filebtn:hover{ background:#453b32; }
+  button:disabled{ opacity:.4; cursor:not-allowed; }
+  button.secondary{
+    background:transparent;
+    color:var(--ink);
+    border:1.5px solid var(--ink);
+  }
+  button.secondary:hover{ background:#00000010; }
+  input[type=range]{ accent-color:var(--red); }
+  input[type=color]{
+    width:34px; height:28px; border:1px solid var(--panel-edge);
+    border-radius:3px; padding:0; background:none; cursor:pointer;
+  }
+  .mode-btn{
+    background:transparent;
+    border:1.5px solid var(--ink);
+    color:var(--ink);
+    padding:6px 10px;
+  }
+  .mode-btn.active{
+    background:var(--red);
+    border-color:var(--red);
+    color:#fff;
+  }
+  .hint{
+    font-size:.72rem;
+    color:var(--accent);
+    margin-top:8px;
+  }
+  #fileInput{ display:none; }
+
+  .export-panel{
+    margin-top:16px;
+    background:var(--panel);
+    border:2px solid var(--panel-edge);
+    border-radius:4px;
+    padding:14px 16px;
+    display:none;
+  }
+  .export-panel h2{
+    font-size:.85rem;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    margin:0 0 10px;
+  }
+  .field-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-bottom:10px;
+  }
+  .field{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    font-size:.72rem;
+    flex:1;
+    min-width:160px;
+  }
+  .field input{
+    font-family:inherit;
+    font-size:.8rem;
+    padding:7px 8px;
+    border:1px solid var(--panel-edge);
+    border-radius:3px;
+    background:#fff;
+    color:var(--ink);
+  }
+  .export-actions{
+    display:flex;
+    gap:10px;
+    align-items:center;
+    flex-wrap:wrap;
+  }
+  .status{
+    font-size:.75rem;
+    color:var(--accent);
+  }
+  .status.error{ color:#a4302a; }
+  .status.ok{ color:#3f7a3f; }
+  .result-url{
+    font-size:.75rem;
+    word-break:break-all;
+    background:#fff;
+    border:1px solid var(--panel-edge);
+    border-radius:3px;
+    padding:8px;
+    margin-top:8px;
+    display:none;
+  }
+  .result-url a{ color:var(--red); }
+  .progress{
+    width:100%;
+    height:6px;
+    background:#fff;
+    border:1px solid var(--panel-edge);
+    border-radius:3px;
+    overflow:hidden;
+    margin-top:8px;
+    display:none;
+  }
+  .progress-bar{
+    height:100%;
+    width:0%;
+    background:var(--red);
+    transition:width .15s;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Marcador de rutas</h1>
+    <span class="tag">sube una imagen · dibuja en rojo · descarga</span>
+  </header>
+
+  <div class="stage">
+    <div id="baseImageGallerySection">
+      <h2 style="font-size:.85rem; text-transform:uppercase; letter-spacing:.06em; margin:0 0 8px;">Imágenes base guardadas</h2>
+      <div id="baseImageGallery" style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:14px;"></div>
+    </div>
+    <div class="dropzone" id="dropzone">
+      <p>Arrastra una imagen aquí o haz clic para elegirla<br><span style="font-size:.7rem;">JPG, PNG o WebP</span></p>
+    </div>
+    <div class="canvas-holder" id="canvasHolder" style="display:none;">
+      <canvas id="base"></canvas>
+      <canvas id="draw"></canvas>
+    </div>
+    <input type="file" id="fileInput" accept="image/*">
+  </div>
+
+  <div class="toolbar" id="toolbar" style="display:none;">
+    <div class="group">
+      <button class="mode-btn active" id="modeBrush">Pincel</button>
+      <button class="mode-btn" id="modeArrow">Flecha</button>
+      <button class="mode-btn" id="modeLine">Línea recta</button>
+      <button class="mode-btn" id="modeCircle">Círculo</button>
+      <button class="mode-btn" id="modeOval">Óvalo</button>
+      <button class="mode-btn" id="modeRect">Rectángulo</button>
+      <button class="mode-btn" id="modeMove">✥ Mover</button>
+    </div>
+    <div class="divider"></div>
+    <div class="group">
+      <label for="color">Color</label>
+      <input type="color" id="color" value="#c0392b">
+    </div>
+    <div class="group">
+      <label for="size">Grosor</label>
+      <input type="range" id="size" min="2" max="60" value="14">
+      <span id="sizeLabel">14px</span>
+    </div>
+    <div class="group">
+      <label for="fillShape"><input type="checkbox" id="fillShape"> Relleno</label>
+    </div>
+    <div class="divider"></div>
+    <div class="group">
+      <button class="secondary" id="undoBtn">Deshacer</button>
+      <button class="secondary" id="clearBtn">Borrar todo</button>
+    </div>
+    <div class="divider"></div>
+    <div class="group">
+      <button class="secondary" id="blinkBtn">✦ Animar marcas</button>
+    </div>
+    <div class="divider"></div>
+    <div class="group">
+      <button id="newImgBtn" class="secondary">Nueva imagen</button>
+      <button id="downloadBtn">Descargar</button>
+    </div>
+  </div>
+  <p class="hint" id="hint" style="display:none;">Pincel: dibuja arrastrando. Línea/Flecha/Círculo/Óvalo/Rectángulo: haz clic y arrastra desde el inicio hasta el final. Marca "Relleno" para figuras sólidas. "✥ Mover": haz clic sobre una marca existente y arrástrala a su nueva posición. "Animar marcas" hace que parpadeen (solo vista previa; la descarga se guarda fija).</p>
+
+  <div class="export-panel" id="exportPanel">
+    <h2>1 · Generar GIF y subirlo a Cloudinary</h2>
+    <div class="field-row">
+      <div class="field">
+        <label for="cloudName">Cloud name</label>
+        <input type="text" id="cloudName" placeholder="ej. dxy1abcde" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="uploadPreset">Upload preset (sin firmar)</label>
+        <input type="text" id="uploadPreset" placeholder="ej. marcas_unsigned" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="gifFolderInput">Carpeta en Cloudinary</label>
+        <input type="text" id="gifFolderInput" value="mapas/campo_libre" autocomplete="off">
+      </div>
+    </div>
+    <div class="export-actions">
+      <button id="generateGifBtn">Generar GIF y subir</button>
+      <span class="status" id="exportStatus"></span>
+    </div>
+    <div class="progress" id="progress"><div class="progress-bar" id="progressBar"></div></div>
+    <div class="result-url" id="resultUrl"></div>
+    <img id="gifPreview" style="display:none; max-width:280px; margin-top:10px; border:1px solid var(--panel-edge); border-radius:3px;">
+
+    <h2 style="margin-top:18px;">Mapas subidos en esta sesión</h2>
+    <p class="hint" style="margin-top:-4px;">Genera varios GIFs sin asociar Pokémon todavía, y vuelve luego a cualquiera de ellos para completarlo.</p>
+
+    <div class="field-row" style="margin-top:4px;">
+      <div class="field" style="flex:2;">
+        <label for="listEndpointInput">Endpoint de tu backend para listar (GET)</label>
+        <input type="text" id="listEndpointInput" placeholder="https://tu-api.com/marcas" autocomplete="off">
+      </div>
+      <div class="field" style="justify-content:flex-end; flex:0;">
+        <button id="fetchGifsBtn" style="margin-top:auto;">↻ Cargar mis mapas</button>
+      </div>
+    </div>
+    <span class="status" id="fetchGifsStatus"></span>
+
+    <div id="gifGallery" style="display:flex; flex-wrap:wrap; gap:10px; margin:8px 0;"></div>
+
+    <details style="margin-top:4px;">
+      <summary style="cursor:pointer; font-size:.75rem; color:var(--accent);">O pega una URL de GIF suelta (si no tienes backend todavía)</summary>
+      <div class="field-row" style="margin-top:8px;">
+        <div class="field" style="flex:2;">
+          <label for="loadGifUrlInput">URL de Cloudinary</label>
+          <input type="text" id="loadGifUrlInput" placeholder="https://res.cloudinary.com/.../mapa.gif" autocomplete="off">
+        </div>
+        <div class="field" style="justify-content:flex-end; flex:0;">
+          <button class="secondary" id="loadGifUrlBtn" style="margin-top:auto;">Cargar</button>
+        </div>
+      </div>
+    </details>
+
+    <h2 style="margin-top:18px;">2 · Asociar Pokémon (opcional, se puede hacer después)</h2>
+    <div id="activeGifNote" class="hint" style="display:none; margin-top:-4px;"></div>
+    <div class="field-row">
+      <div class="field" style="max-width:160px;">
+        <label for="pokedexIdInput">Número de Pokédex</label>
+        <input type="number" id="pokedexIdInput" min="1" placeholder="ej. 25" autocomplete="off">
+      </div>
+      <div class="field" style="justify-content:flex-end; flex:0;">
+        <button class="secondary" id="addPokemonBtn" style="margin-top:auto;">Añadir</button>
+      </div>
+    </div>
+    <div id="pokemonChips" style="display:flex; flex-wrap:wrap; gap:8px; margin:4px 0 4px;"></div>
+    <span class="status" id="pokemonAddStatus"></span>
+
+    <h2 style="margin-top:18px;">3 · Guardar en tu base de datos</h2>
+    <div class="field-row">
+      <div class="field" style="flex:2;">
+        <label for="dbEndpoint">Endpoint de tu backend (POST)</label>
+        <input type="text" id="dbEndpoint" placeholder="https://tu-api.com/marcas" autocomplete="off">
+      </div>
+    </div>
+    <div class="export-actions">
+      <button id="saveVariantBtn" disabled>Guardar GIF (con o sin Pokémon)</button>
+      <span class="status" id="variantStatus"></span>
+    </div>
+    <p class="hint" style="margin-top:6px;">Envía <code>{ gifUrl, publicId, pokemonIds: [], width, height, createdAt }</code> a tu backend. <code>pokemonIds</code> puede ir vacío — luego puedes hacer otro POST (o un PATCH del lado de tu backend) al volver a este mismo GIF y añadir Pokémon.</p>
+
+    <details style="margin-top:16px;">
+      <summary style="cursor:pointer; font-size:.8rem; color:var(--accent);">Avanzado: reutilizar la imagen base sin volver a subirla en cada prueba</summary>
+      <p class="hint">Si vas a generar muchas variantes de la misma foto mientras pruebas trazos, puedes subir la imagen base una sola vez aquí. El GIF final igual necesita horneen los píxeles (por eso pesa lo que pesa), pero te ahorra subidas de prueba innecesarias antes de decidir el resultado final.</p>
+      <div class="field-row">
+        <div class="field" style="max-width:260px;">
+          <label for="baseFolderInput">Carpeta en Cloudinary (opcional)</label>
+          <input type="text" id="baseFolderInput" placeholder="ej. mapas/kanto" autocomplete="off">
+        </div>
+      </div>
+      <div class="export-actions">
+        <button class="secondary" id="uploadBaseBtn">Subir imagen base (opcional)</button>
+        <span class="status" id="baseStatus"></span>
+      </div>
+      <div class="result-url" id="baseResult"></div>
+    </details>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
+<script>
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const canvasHolder = document.getElementById('canvasHolder');
+const toolbar = document.getElementById('toolbar');
+const hint = document.getElementById('hint');
+const base = document.getElementById('base');
+const draw = document.getElementById('draw');
+const bctx = base.getContext('2d');
+const dctx = draw.getContext('2d');
+
+const colorInput = document.getElementById('color');
+const sizeInput = document.getElementById('size');
+const sizeLabel = document.getElementById('sizeLabel');
+const undoBtn = document.getElementById('undoBtn');
+const clearBtn = document.getElementById('clearBtn');
+const downloadBtn = document.getElementById('downloadBtn');
+const newImgBtn = document.getElementById('newImgBtn');
+const modeBrush = document.getElementById('modeBrush');
+const modeArrow = document.getElementById('modeArrow');
+const modeLine = document.getElementById('modeLine');
+const modeCircle = document.getElementById('modeCircle');
+const modeOval = document.getElementById('modeOval');
+const modeRect = document.getElementById('modeRect');
+const modeMove = document.getElementById('modeMove');
+const fillShapeInput = document.getElementById('fillShape');
+
+const exportPanel = document.getElementById('exportPanel');
+const cloudNameInput = document.getElementById('cloudName');
+const uploadPresetInput = document.getElementById('uploadPreset');
+const gifFolderInput = document.getElementById('gifFolderInput');
+const dbEndpointInput = document.getElementById('dbEndpoint');
+const uploadBaseBtn = document.getElementById('uploadBaseBtn');
+const baseFolderInput = document.getElementById('baseFolderInput');
+const baseStatus = document.getElementById('baseStatus');
+const baseResult = document.getElementById('baseResult');
+const saveVariantBtn = document.getElementById('saveVariantBtn');
+const variantStatus = document.getElementById('variantStatus');
+const generateGifBtn = document.getElementById('generateGifBtn');
+const exportStatus = document.getElementById('exportStatus');
+const progress = document.getElementById('progress');
+const progressBar = document.getElementById('progressBar');
+const resultUrl = document.getElementById('resultUrl');
+const gifPreview = document.getElementById('gifPreview');
+const pokedexIdInput = document.getElementById('pokedexIdInput');
+const addPokemonBtn = document.getElementById('addPokemonBtn');
+const pokemonChips = document.getElementById('pokemonChips');
+const pokemonAddStatus = document.getElementById('pokemonAddStatus');
+const gifGallery = document.getElementById('gifGallery');
+const loadGifUrlInput = document.getElementById('loadGifUrlInput');
+const loadGifUrlBtn = document.getElementById('loadGifUrlBtn');
+const listEndpointInput = document.getElementById('listEndpointInput');
+const fetchGifsBtn = document.getElementById('fetchGifsBtn');
+const fetchGifsStatus = document.getElementById('fetchGifsStatus');
+const activeGifNote = document.getElementById('activeGifNote');
+const baseImageGallery = document.getElementById('baseImageGallery');
+const baseImageGallerySection = document.getElementById('baseImageGallerySection');
+
+// Base map images already uploaded to Cloudinary, ready to reuse without
+// picking a file from disk each time. The source of truth is mapas-base.json
+// (must sit next to this HTML file) — edit that file to add/remove maps.
+let presetBaseImages = [];
+
+function renderBaseImageGallery(){
+  baseImageGallery.innerHTML = '';
+  if (presetBaseImages.length === 0){
+    baseImageGallerySection.style.display = 'none';
+    return;
+  }
+  baseImageGallerySection.style.display = 'block';
+  presetBaseImages.forEach(preset => {
+    const card = document.createElement('div');
+    card.style.cssText = 'width:130px; background:var(--panel); border:1px solid var(--panel-edge); border-radius:4px; padding:6px; text-align:center; cursor:pointer;';
+    const img = document.createElement('img');
+    img.src = preset.url;
+    img.style.cssText = 'width:100%; height:80px; object-fit:cover; border-radius:2px; display:block; image-rendering:pixelated;';
+    const label = document.createElement('div');
+    label.style.cssText = 'font-size:.7rem; margin-top:6px;';
+    label.textContent = preset.name;
+    card.appendChild(img);
+    card.appendChild(label);
+    card.onclick = () => loadImageFromUrl(preset.url);
+    baseImageGallery.appendChild(card);
+  });
+}
+renderBaseImageGallery();
+
+// Load the list from mapas-base.json. If it can't be reached (e.g. opening the
+// HTML directly from disk without a server), the gallery just stays empty and
+// the person can still upload an image from their computer as usual.
+fetch('./mapas-base.json')
+  .then(res => { if (!res.ok) throw new Error('mapas-base.json no encontrado'); return res.json(); })
+  .then(list => {
+    if (Array.isArray(list)){
+      presetBaseImages = list.filter(item => item && item.url);
+      renderBaseImageGallery();
+    }
+  })
+  .catch(() => { /* keep gallery empty, no error shown to the user */ });
+
+function loadImageFromUrl(url){
+  const image = new Image();
+  // Needed so the canvas isn't "tainted" — otherwise toBlob()/toDataURL() fail later
+  // (base.toBlob for the advanced base-upload path, and the final GIF export).
+  image.crossOrigin = 'anonymous';
+  image.onload = () => setupCanvas(image);
+  image.onerror = () => {
+    dropzone.querySelector('p').innerHTML = 'No se pudo cargar esa imagen (revisa que el servidor permita CORS).<br><span style="font-size:.7rem;">Intenta subirla desde tu computadora en su lugar.</span>';
+  };
+  image.src = url;
+}
+
+// Every GIF generated/loaded in this session, so the user can come back
+// and finish associating Pokémon later without re-uploading anything.
+let sessionGifs = []; // [{ publicId, secureUrl, width, height, pokemonIds: number[] }]
+
+// Holds the Cloudinary reference for the currently loaded base image (optional/advanced path)
+let baseAsset = null; // { publicId, secureUrl }
+// Holds the last generated GIF asset, ready to be saved to the backend
+let gifAsset = null; // { publicId, secureUrl, width, height }
+// Pokémon (by Pokédex number) associated with the current GIF: [{ id, name, sprite }]
+let associatedPokemon = [];
+
+
+let mode = 'brush';
+let strokes = []; // each stroke: {type, color, size, points:[{x,y}]}
+let currentStroke = null;
+let drawing = false;
+let img = null;
+
+let selectedStroke = null;
+
+function setMode(m){
+  mode = m;
+  [modeBrush, modeArrow, modeLine, modeCircle, modeOval, modeRect, modeMove].forEach(b => b.classList.remove('active'));
+  ({brush:modeBrush, arrow:modeArrow, line:modeLine, circle:modeCircle, oval:modeOval, rect:modeRect, move:modeMove})[m].classList.add('active');
+  draw.classList.toggle('move-mode', m === 'move');
+  if (m !== 'move'){ selectedStroke = null; redrawStrokes(); }
+}
+modeBrush.onclick = () => setMode('brush');
+modeArrow.onclick = () => setMode('arrow');
+modeLine.onclick = () => setMode('line');
+modeCircle.onclick = () => setMode('circle');
+modeOval.onclick = () => setMode('oval');
+modeRect.onclick = () => setMode('rect');
+modeMove.onclick = () => setMode('move');
+
+sizeInput.oninput = () => sizeLabel.textContent = sizeInput.value + 'px';
+
+// --- File loading ---
+dropzone.onclick = () => fileInput.click();
+dropzone.ondragover = e => { e.preventDefault(); dropzone.classList.add('drag'); };
+dropzone.ondragleave = () => dropzone.classList.remove('drag');
+dropzone.ondrop = e => {
+  e.preventDefault();
+  dropzone.classList.remove('drag');
+  if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+};
+fileInput.onchange = () => { if (fileInput.files[0]) loadFile(fileInput.files[0]); };
+
+function loadFile(file){
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const image = new Image();
+    image.onload = () => setupCanvas(image);
+    image.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function setupCanvas(image){
+  img = image;
+  const maxW = 900;
+  let w = image.width, h = image.height;
+  if (w > maxW){ h = h * (maxW/w); w = maxW; }
+  [base, draw].forEach(c => { c.width = w; c.height = h; });
+  bctx.drawImage(image, 0, 0, w, h);
+  strokes = [];
+  selectedStroke = null;
+  redrawStrokes();
+  dropzone.style.display = 'none';
+  baseImageGallerySection.style.display = 'none';
+  canvasHolder.style.display = 'inline-block';
+  toolbar.style.display = 'flex';
+  hint.style.display = 'block';
+  exportPanel.style.display = 'block';
+  resultUrl.style.display = 'none';
+  exportStatus.textContent = '';
+  exportStatus.className = 'status';
+  baseAsset = null;
+  gifAsset = null;
+  baseStatus.textContent = '';
+  baseResult.style.display = 'none';
+  variantStatus.textContent = '';
+  saveVariantBtn.disabled = true;
+  associatedPokemon = [];
+  renderPokemonChips();
+  gifPreview.style.display = 'none';
+  activeGifNote.style.display = 'none';
+}
+
+newImgBtn.onclick = () => {
+  dropzone.style.display = 'flex';
+  dropzone.querySelector('p').innerHTML = 'Arrastra una imagen aquí o haz clic para elegirla<br><span style="font-size:.7rem;">JPG, PNG o WebP</span>';
+  renderBaseImageGallery();
+  canvasHolder.style.display = 'none';
+  toolbar.style.display = 'none';
+  hint.style.display = 'none';
+  fileInput.value = '';
+  strokes = [];
+  exportPanel.style.display = 'none';
+};
+
+// --- Drawing ---
+function getPos(e){
+  const rect = draw.getBoundingClientRect();
+  const scaleX = draw.width / rect.width;
+  const scaleY = draw.height / rect.height;
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
+}
+
+let dragOffset = null;   // {x,y} pointer offset from stroke's reference point at drag start
+let dragInitialPoints = null;
+
+function getBBox(s){
+  const xs = s.points.map(p => p.x);
+  const ys = s.points.map(p => p.y);
+  let minX = Math.min(...xs), maxX = Math.max(...xs);
+  let minY = Math.min(...ys), maxY = Math.max(...ys);
+  if (s.type === 'circle' && s.points.length > 1){
+    const r = Math.hypot(s.points[1].x - s.points[0].x, s.points[1].y - s.points[0].y);
+    minX = s.points[0].x - r; maxX = s.points[0].x + r;
+    minY = s.points[0].y - r; maxY = s.points[0].y + r;
+  }
+  const pad = (s.size || 10) / 2 + 8;
+  return { minX: minX - pad, maxX: maxX + pad, minY: minY - pad, maxY: maxY + pad };
+}
+
+function findStrokeAt(pos){
+  for (let i = strokes.length - 1; i >= 0; i--){
+    const b = getBBox(strokes[i]);
+    if (pos.x >= b.minX && pos.x <= b.maxX && pos.y >= b.minY && pos.y <= b.maxY){
+      return strokes[i];
+    }
+  }
+  return null;
+}
+
+function drawSelectionOutline(s){
+  const b = getBBox(s);
+  dctx.save();
+  dctx.setLineDash([6, 4]);
+  dctx.lineWidth = 1.5;
+  dctx.strokeStyle = '#2b2420';
+  dctx.strokeRect(b.minX, b.minY, b.maxX - b.minX, b.maxY - b.minY);
+  dctx.restore();
+}
+
+function startDraw(e){
+  e.preventDefault();
+  const pos = getPos(e);
+
+  if (mode === 'move'){
+    const hit = findStrokeAt(pos);
+    selectedStroke = hit;
+    if (hit){
+      drawing = true;
+      draw.classList.add('dragging');
+      dragOffset = pos;
+      dragInitialPoints = hit.points.map(p => ({ x: p.x, y: p.y }));
+    }
+    redrawStrokes();
+    return;
+  }
+
+  drawing = true;
+  currentStroke = {
+    type: mode,
+    color: colorInput.value,
+    size: parseInt(sizeInput.value, 10),
+    fill: fillShapeInput.checked,
+    points: [pos]
+  };
+}
+
+function moveDraw(e){
+  if (!drawing) return;
+  e.preventDefault();
+  const pos = getPos(e);
+
+  if (mode === 'move'){
+    if (!selectedStroke) return;
+    const dx = pos.x - dragOffset.x;
+    const dy = pos.y - dragOffset.y;
+    selectedStroke.points = dragInitialPoints.map(p => ({ x: p.x + dx, y: p.y + dy }));
+    redrawStrokes();
+    return;
+  }
+
+  if (mode === 'brush'){
+    currentStroke.points.push(pos);
+  } else {
+    // line/arrow/circle/oval/rect: only start + current end
+    currentStroke.points = [currentStroke.points[0], pos];
+  }
+  redrawStrokes();
+  drawStroke(dctx, currentStroke);
+}
+
+function endDraw(e){
+  if (!drawing) return;
+  drawing = false;
+
+  if (mode === 'move'){
+    draw.classList.remove('dragging');
+    dragOffset = null;
+    dragInitialPoints = null;
+    return;
+  }
+
+  if (currentStroke && currentStroke.points.length > 1){
+    strokes.push(currentStroke);
+  } else if (currentStroke && mode === 'brush' && currentStroke.points.length === 1){
+    // single click dot
+    strokes.push(currentStroke);
+  }
+  currentStroke = null;
+  redrawStrokes();
+}
+
+draw.addEventListener('mousedown', startDraw);
+draw.addEventListener('mousemove', moveDraw);
+window.addEventListener('mouseup', endDraw);
+draw.addEventListener('touchstart', startDraw, {passive:false});
+draw.addEventListener('touchmove', moveDraw, {passive:false});
+draw.addEventListener('touchend', endDraw);
+
+function redrawStrokes(){
+  dctx.clearRect(0, 0, draw.width, draw.height);
+  strokes.forEach(s => drawStroke(dctx, s));
+  if (mode === 'move' && selectedStroke){
+    drawSelectionOutline(selectedStroke);
+  }
+}
+
+function drawStroke(ctx, s){
+  ctx.strokeStyle = s.color;
+  ctx.fillStyle = s.color;
+  ctx.lineWidth = s.size;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  if (s.type === 'brush'){
+    if (s.points.length === 1){
+      const p = s.points[0];
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, s.size/2, 0, Math.PI*2);
+      ctx.fill();
+      return;
+    }
+    ctx.beginPath();
+    ctx.moveTo(s.points[0].x, s.points[0].y);
+    for (let i=1;i<s.points.length;i++) ctx.lineTo(s.points[i].x, s.points[i].y);
+    ctx.stroke();
+  } else if (s.type === 'line'){
+    const [p0, p1] = s.points;
+    ctx.beginPath();
+    ctx.moveTo(p0.x, p0.y);
+    ctx.lineTo(p1.x, p1.y);
+    ctx.stroke();
+  } else if (s.type === 'arrow'){
+    const [p0, p1] = s.points;
+    ctx.beginPath();
+    ctx.moveTo(p0.x, p0.y);
+    ctx.lineTo(p1.x, p1.y);
+    ctx.stroke();
+    const angle = Math.atan2(p1.y - p0.y, p1.x - p0.x);
+    const headLen = Math.max(14, s.size * 1.8);
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p1.x - headLen*Math.cos(angle - Math.PI/6), p1.y - headLen*Math.sin(angle - Math.PI/6));
+    ctx.lineTo(p1.x - headLen*Math.cos(angle + Math.PI/6), p1.y - headLen*Math.sin(angle + Math.PI/6));
+    ctx.closePath();
+    ctx.fill();
+  } else if (s.type === 'circle'){
+    const [p0, p1] = s.points;
+    const r = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+    ctx.beginPath();
+    ctx.arc(p0.x, p0.y, r, 0, Math.PI*2);
+    if (s.fill) ctx.fill(); else ctx.stroke();
+  } else if (s.type === 'oval'){
+    const [p0, p1] = s.points;
+    const cx = (p0.x + p1.x) / 2;
+    const cy = (p0.y + p1.y) / 2;
+    const rx = Math.abs(p1.x - p0.x) / 2;
+    const ry = Math.abs(p1.y - p0.y) / 2;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx || 1, ry || 1, 0, 0, Math.PI*2);
+    if (s.fill) ctx.fill(); else ctx.stroke();
+  } else if (s.type === 'rect'){
+    const [p0, p1] = s.points;
+    const x = Math.min(p0.x, p1.x);
+    const y = Math.min(p0.y, p1.y);
+    const w = Math.abs(p1.x - p0.x);
+    const h = Math.abs(p1.y - p0.y);
+    if (s.fill) ctx.fillRect(x, y, w, h); else ctx.strokeRect(x, y, w, h);
+  }
+}
+
+undoBtn.onclick = () => {
+  strokes.pop();
+  selectedStroke = null;
+  redrawStrokes();
+};
+clearBtn.onclick = () => {
+  strokes = [];
+  selectedStroke = null;
+  redrawStrokes();
+};
+
+const blinkBtn = document.getElementById('blinkBtn');
+let blinking = false;
+blinkBtn.onclick = () => {
+  blinking = !blinking;
+  draw.classList.toggle('blink', blinking);
+  blinkBtn.classList.toggle('active', blinking);
+  blinkBtn.textContent = blinking ? '✦ Detener animación' : '✦ Animar marcas';
+};
+
+downloadBtn.onclick = () => {
+  const out = document.createElement('canvas');
+  out.width = base.width;
+  out.height = base.height;
+  const octx = out.getContext('2d');
+  octx.drawImage(base, 0, 0);
+  octx.drawImage(draw, 0, 0);
+  const link = document.createElement('a');
+  link.download = 'marcado.png';
+  link.href = out.toDataURL('image/png');
+  link.click();
+};
+
+// --- Optional/advanced: upload the base image alone, to avoid re-uploading it during iteration ---
+function uploadImageToCloudinary(source, cloudName, uploadPreset, folder){
+  const formData = new FormData();
+  formData.append('file', source);
+  formData.append('upload_preset', uploadPreset);
+  if (folder){
+    // Cloudinary accounts on "Dynamic Folder Mode" (the current default for new
+    // accounts) expect `asset_folder`, not the legacy `folder` param. Sending
+    // both is harmless — Cloudinary ignores the one it doesn't recognize.
+    formData.append('asset_folder', folder);
+    formData.append('folder', folder);
+  }
+  return fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+    method: 'POST',
+    body: formData
+  }).then(async res => {
+    if (!res.ok){
+      const errBody = await res.text();
+      throw new Error('Cloudinary rechazó la subida: ' + errBody);
+    }
+    return res.json();
+  });
+}
+
+uploadBaseBtn.onclick = async () => {
+  const cloudName = cloudNameInput.value.trim();
+  const uploadPreset = uploadPresetInput.value.trim();
+  const folder = baseFolderInput.value.trim();
+  if (!cloudName || !uploadPreset){
+    baseStatus.textContent = 'Falta el cloud name o el upload preset.';
+    baseStatus.className = 'status error';
+    return;
+  }
+  if (baseAsset){
+    baseStatus.textContent = 'Esta imagen ya está subida — reutilizando la existente.';
+    baseStatus.className = 'status ok';
+    return;
+  }
+  uploadBaseBtn.disabled = true;
+  baseStatus.textContent = 'Subiendo imagen base…';
+  baseStatus.className = 'status';
+  try {
+    const blob = await new Promise(res => base.toBlob(res, 'image/png'));
+    const data = await uploadImageToCloudinary(blob, cloudName, uploadPreset, folder);
+    baseAsset = { publicId: data.public_id, secureUrl: data.secure_url };
+    baseStatus.textContent = 'Subida una sola vez ✓';
+    baseStatus.className = 'status ok';
+    baseResult.style.display = 'block';
+    baseResult.innerHTML = 'Base: <a href="' + baseAsset.secureUrl + '" target="_blank" rel="noopener">' + baseAsset.secureUrl + '</a>';
+  } catch (err){
+    console.error(err);
+    baseStatus.textContent = 'Error: ' + err.message;
+    baseStatus.className = 'status error';
+  } finally {
+    uploadBaseBtn.disabled = false;
+  }
+};
+
+// --- Step 1: generate the blinking GIF and upload it to Cloudinary ---
+function setStatus(msg, kind){
+  exportStatus.textContent = msg;
+  exportStatus.className = 'status' + (kind ? ' ' + kind : '');
+}
+
+function buildFrame(showMarks){
+  const c = document.createElement('canvas');
+  c.width = base.width;
+  c.height = base.height;
+  const ctx = c.getContext('2d');
+  ctx.drawImage(base, 0, 0);
+  if (showMarks) ctx.drawImage(draw, 0, 0);
+  return c;
+}
+
+// gif.js needs its worker script to be same-origin. When this page is opened
+// via file:// (origin "null") or from a different host than cdnjs, the browser
+// blocks `new Worker(crossOriginUrl)`. Fetching the script and wrapping it in a
+// Blob URL sidesteps that, since blob: URLs are always treated as same-origin.
+let gifWorkerBlobUrl = null;
+async function getGifWorkerUrl(){
+  if (gifWorkerBlobUrl) return gifWorkerBlobUrl;
+  const res = await fetch('https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js');
+  if (!res.ok) throw new Error('No se pudo descargar el worker de gif.js');
+  const scriptText = await res.text();
+  const blob = new Blob([scriptText], { type: 'application/javascript' });
+  gifWorkerBlobUrl = URL.createObjectURL(blob);
+  return gifWorkerBlobUrl;
+}
+
+function generateGif(){
+  return new Promise(async (resolve, reject) => {
+    if (strokes.length === 0){
+      reject(new Error('Dibuja al menos una marca antes de generar el GIF.'));
+      return;
+    }
+    let workerUrl;
+    try {
+      workerUrl = await getGifWorkerUrl();
+    } catch (err){
+      reject(err);
+      return;
+    }
+    const gif = new GIF({
+      workers: 2,
+      quality: 10,
+      workerScript: workerUrl
+    });
+    gif.addFrame(buildFrame(true), { delay: 650 });
+    gif.addFrame(buildFrame(false), { delay: 350 });
+    gif.on('progress', p => {
+      progress.style.display = 'block';
+      progressBar.style.width = Math.round(p * 100) + '%';
+    });
+    gif.on('finished', blob => resolve(blob));
+    gif.render();
+  });
+}
+
+generateGifBtn.onclick = async () => {
+  const cloudName = cloudNameInput.value.trim();
+  const uploadPreset = uploadPresetInput.value.trim();
+  const gifFolder = gifFolderInput.value.trim();
+  resultUrl.style.display = 'none';
+  gifPreview.style.display = 'none';
+  progress.style.display = 'none';
+  progressBar.style.width = '0%';
+  gifAsset = null;
+  saveVariantBtn.disabled = true;
+  associatedPokemon = [];
+  renderPokemonChips();
+
+  if (!cloudName || !uploadPreset){
+    setStatus('Falta el cloud name o el upload preset de Cloudinary.', 'error');
+    return;
+  }
+
+  generateGifBtn.disabled = true;
+  try {
+    setStatus('Generando GIF…');
+    const blob = await generateGif();
+    setStatus('Subiendo GIF a Cloudinary…');
+    const data = await uploadImageToCloudinary(blob, cloudName, uploadPreset, gifFolder);
+    gifAsset = { publicId: data.public_id, secureUrl: data.secure_url, width: data.width, height: data.height };
+    resultUrl.style.display = 'block';
+    resultUrl.innerHTML = 'GIF: <a href="' + gifAsset.secureUrl + '" target="_blank" rel="noopener">' + gifAsset.secureUrl + '</a>';
+    gifPreview.src = gifAsset.secureUrl;
+    gifPreview.style.display = 'block';
+    activeGifNote.style.display = 'none';
+    setStatus('Listo. Puedes asociar Pokémon ahora (paso 2) o guardarlo así y volver después.', 'ok');
+    saveVariantBtn.disabled = false;
+
+    const entry = { publicId: gifAsset.publicId, secureUrl: gifAsset.secureUrl, width: gifAsset.width, height: gifAsset.height, pokemonIds: [] };
+    sessionGifs.push(entry);
+    selectGifEntry(entry);
+    renderGifGallery();
+  } catch (err) {
+    console.error(err);
+    setStatus('Error: ' + err.message, 'error');
+  } finally {
+    generateGifBtn.disabled = false;
+    progress.style.display = 'none';
+  }
+};
+
+// --- Session gallery: revisit any previously generated/loaded GIF to finish associating Pokémon ---
+function renderGifGallery(){
+  gifGallery.innerHTML = '';
+  if (sessionGifs.length === 0) return;
+  sessionGifs.forEach(entry => {
+    const card = document.createElement('div');
+    card.style.cssText = 'width:110px; background:#fff; border:1px solid var(--panel-edge); border-radius:4px; padding:6px; text-align:center; cursor:pointer;';
+    if (gifAsset && gifAsset.publicId === entry.publicId){
+      card.style.outline = '2px solid var(--red)';
+    }
+    const img = document.createElement('img');
+    img.src = entry.secureUrl;
+    img.style.cssText = 'width:100%; height:70px; object-fit:cover; border-radius:2px; display:block;';
+    const label = document.createElement('div');
+    label.style.cssText = 'font-size:.68rem; margin-top:4px; color:var(--accent);';
+    label.textContent = entry.pokemonIds.length + ' Pokémon';
+    card.appendChild(img);
+    card.appendChild(label);
+    card.onclick = () => selectGifEntry(entry);
+    gifGallery.appendChild(card);
+  });
+}
+
+// Loads a gallery entry (or a freshly generated one) as the "active" GIF for the Pokémon-association step
+async function selectGifEntry(entry){
+  gifAsset = { publicId: entry.publicId, secureUrl: entry.secureUrl, width: entry.width, height: entry.height };
+  gifPreview.src = entry.secureUrl;
+  gifPreview.style.display = 'block';
+  resultUrl.style.display = 'block';
+  resultUrl.innerHTML = 'GIF activo: <a href="' + entry.secureUrl + '" target="_blank" rel="noopener">' + entry.secureUrl + '</a>';
+  saveVariantBtn.disabled = false;
+  activeGifNote.style.display = 'block';
+  activeGifNote.textContent = 'Editando el mapa seleccionado arriba — ya tenía ' + entry.pokemonIds.length + ' Pokémon asociado(s).';
+
+  associatedPokemon = [];
+  renderPokemonChips();
+  if (entry.pokemonIds.length){
+    pokemonAddStatus.textContent = 'Cargando Pokémon ya asociados…';
+    for (const id of entry.pokemonIds){
+      try {
+        const res = await fetch('https://pokeapi.co/api/v2/pokemon/' + id);
+        if (res.ok){
+          const data = await res.json();
+          associatedPokemon.push({ id: data.id, name: data.name, sprite: data.sprites && data.sprites.front_default });
+        }
+      } catch(e){ /* ignore individual lookup failures */ }
+    }
+    renderPokemonChips();
+    pokemonAddStatus.textContent = '';
+  }
+  renderGifGallery();
+}
+
+// --- Auto-load: GET your backend's list of saved GIFs and populate the gallery, no manual URLs needed ---
+fetchGifsBtn.onclick = async () => {
+  const endpoint = listEndpointInput.value.trim();
+  fetchGifsStatus.textContent = '';
+  fetchGifsStatus.className = 'status';
+  if (!endpoint){
+    fetchGifsStatus.textContent = 'Indica el endpoint GET de tu backend.';
+    fetchGifsStatus.className = 'status error';
+    return;
+  }
+  fetchGifsBtn.disabled = true;
+  fetchGifsStatus.textContent = 'Cargando mapas guardados…';
+  try {
+    const res = await fetch(endpoint);
+    if (!res.ok) throw new Error('El backend respondió con error ' + res.status);
+    const data = await res.json();
+    const list = Array.isArray(data) ? data : (Array.isArray(data.items) ? data.items : []);
+    if (list.length === 0){
+      fetchGifsStatus.textContent = 'Tu backend no devolvió ningún mapa todavía.';
+      return;
+    }
+    let added = 0;
+    list.forEach(item => {
+      const url = item.gifUrl || item.url || item.secureUrl;
+      const publicId = item.publicId || item.public_id || url;
+      if (!url) return;
+      if (sessionGifs.some(e => e.secureUrl === url)) return; // avoid duplicates on re-fetch
+      sessionGifs.push({
+        publicId,
+        secureUrl: url,
+        width: item.width || null,
+        height: item.height || null,
+        pokemonIds: Array.isArray(item.pokemonIds) ? item.pokemonIds : []
+      });
+      added++;
+    });
+    renderGifGallery();
+    fetchGifsStatus.textContent = added > 0
+      ? added + ' mapa(s) cargados desde tu backend ✓'
+      : 'No había mapas nuevos que agregar.';
+    fetchGifsStatus.className = 'status ok';
+  } catch (err){
+    console.error(err);
+    fetchGifsStatus.textContent = 'Error: ' + err.message;
+    fetchGifsStatus.className = 'status error';
+  } finally {
+    fetchGifsBtn.disabled = false;
+  }
+};
+
+loadGifUrlBtn.onclick = () => {
+  const url = loadGifUrlInput.value.trim();
+  if (!url){
+    pokemonAddStatus.textContent = 'Pega la URL del GIF que quieres cargar.';
+    pokemonAddStatus.className = 'status error';
+    return;
+  }
+  // Best-effort public_id extraction from a Cloudinary URL; not critical if it doesn't match exactly.
+  const match = url.match(/\/upload\/(?:v\d+\/)?(.+?)\.[a-zA-Z0-9]+$/);
+  const publicId = match ? match[1] : url;
+  let entry = sessionGifs.find(e => e.secureUrl === url);
+  if (!entry){
+    entry = { publicId, secureUrl: url, width: null, height: null, pokemonIds: [] };
+    sessionGifs.push(entry);
+  }
+  selectGifEntry(entry);
+  renderGifGallery();
+  loadGifUrlInput.value = '';
+};
+
+// --- Associate this GIF with one or more Pokémon (by Pokédex number) ---
+function renderPokemonChips(){
+  pokemonChips.innerHTML = '';
+  associatedPokemon.forEach(p => {
+    const chip = document.createElement('span');
+    chip.style.cssText = 'display:inline-flex; align-items:center; gap:6px; background:#fff; border:1px solid var(--panel-edge); border-radius:14px; padding:4px 6px 4px 10px; font-size:.75rem;';
+    if (p.sprite){
+      const img = document.createElement('img');
+      img.src = p.sprite;
+      img.style.cssText = 'width:22px; height:22px; image-rendering:pixelated;';
+      chip.appendChild(img);
+    }
+    const label = document.createElement('span');
+    label.textContent = '#' + String(p.id).padStart(3, '0') + ' ' + p.name;
+    chip.appendChild(label);
+    const removeBtn = document.createElement('button');
+    removeBtn.textContent = '✕';
+    removeBtn.style.cssText = 'background:none; border:none; color:var(--accent); cursor:pointer; font-size:.75rem; padding:0 2px;';
+    removeBtn.onclick = () => {
+      associatedPokemon = associatedPokemon.filter(x => x.id !== p.id);
+      renderPokemonChips();
+    };
+    chip.appendChild(removeBtn);
+    pokemonChips.appendChild(chip);
+  });
+}
+
+addPokemonBtn.onclick = async () => {
+  const idStr = pokedexIdInput.value.trim();
+  pokemonAddStatus.textContent = '';
+  pokemonAddStatus.className = 'status';
+  const id = parseInt(idStr, 10);
+  if (!id || id < 1){
+    pokemonAddStatus.textContent = 'Escribe un número de Pokédex válido.';
+    pokemonAddStatus.className = 'status error';
+    return;
+  }
+  if (associatedPokemon.some(p => p.id === id)){
+    pokemonAddStatus.textContent = 'Ese Pokémon ya está en la lista.';
+    pokemonAddStatus.className = 'status error';
+    return;
+  }
+  addPokemonBtn.disabled = true;
+  pokemonAddStatus.textContent = 'Buscando #' + id + '…';
+  try {
+    const res = await fetch('https://pokeapi.co/api/v2/pokemon/' + id);
+    if (!res.ok) throw new Error('No existe un Pokémon con el número ' + id);
+    const data = await res.json();
+    associatedPokemon.push({
+      id: data.id,
+      name: data.name,
+      sprite: data.sprites && data.sprites.front_default
+    });
+    renderPokemonChips();
+    pokemonAddStatus.textContent = '';
+    pokedexIdInput.value = '';
+    pokedexIdInput.focus();
+  } catch (err){
+    pokemonAddStatus.textContent = err.message;
+    pokemonAddStatus.className = 'status error';
+  } finally {
+    addPokemonBtn.disabled = false;
+  }
+};
+pokedexIdInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter'){ e.preventDefault(); addPokemonBtn.click(); }
+});
+
+// --- Step 3: save the GIF URL + associated Pokémon IDs (can be empty) to your backend/database ---
+saveVariantBtn.onclick = async () => {
+  const dbEndpoint = dbEndpointInput.value.trim();
+  variantStatus.textContent = '';
+  variantStatus.className = 'status';
+
+  if (!gifAsset){
+    variantStatus.textContent = 'Primero genera o selecciona un GIF.';
+    variantStatus.className = 'status error';
+    return;
+  }
+  if (!dbEndpoint){
+    variantStatus.textContent = 'Falta el endpoint de tu backend.';
+    variantStatus.className = 'status error';
+    return;
+  }
+
+  const payload = {
+    gifUrl: gifAsset.secureUrl,
+    publicId: gifAsset.publicId,
+    width: gifAsset.width,
+    height: gifAsset.height,
+    pokemonIds: associatedPokemon.map(p => p.id),
+    createdAt: new Date().toISOString()
+  };
+
+  saveVariantBtn.disabled = true;
+  variantStatus.textContent = 'Guardando…';
+  try {
+    const res = await fetch(dbEndpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('El backend respondió con error ' + res.status);
+    variantStatus.textContent = associatedPokemon.length
+      ? 'GIF + ' + associatedPokemon.length + ' Pokémon guardados ✓'
+      : 'GIF guardado sin Pokémon (puedes volver luego a añadirlos) ✓';
+    variantStatus.className = 'status ok';
+
+    // Keep the session gallery entry in sync with what was just saved
+    const entry = sessionGifs.find(e => e.publicId === gifAsset.publicId);
+    if (entry) entry.pokemonIds = associatedPokemon.map(p => p.id);
+    renderGifGallery();
+  } catch (err){
+    console.error(err);
+    variantStatus.textContent = 'Error: ' + err.message;
+    variantStatus.className = 'status error';
+  } finally {
+    saveVariantBtn.disabled = false;
+  }
+};
+</script>
+</body>
+</html>
