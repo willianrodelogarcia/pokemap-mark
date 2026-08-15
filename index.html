@@ -240,6 +240,58 @@
     transition:width .15s;
   }
 </style>
+<style>
+#dropzone.loading { opacity: .75; pointer-events: none; }
+
+  .map-selector-head{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:10px; flex-wrap:wrap; margin-bottom:10px;
+  }
+  .region-tabs{display:flex; flex-wrap:wrap; gap:7px; margin-bottom:12px;}
+  .region-tab{
+    font-family:inherit; font-size:.75rem; text-transform:uppercase;
+    border:1.5px solid var(--ink); background:transparent; color:var(--ink);
+    border-radius:3px; padding:7px 10px; cursor:pointer;
+  }
+  .region-tab.active{background:var(--red); border-color:var(--red); color:#fff;}
+  .map-card{
+    width:150px; background:var(--panel); border:1px solid var(--panel-edge);
+    border-radius:4px; padding:6px; text-align:center; cursor:pointer;
+    transition:transform .12s, box-shadow .12s;
+  }
+  .map-card:hover{transform:translateY(-2px); box-shadow:0 3px 0 #0001;}
+  .map-card.active{outline:2px solid var(--red); outline-offset:2px;}
+  .map-card img{
+    width:100%; height:92px; object-fit:cover; border-radius:2px;
+    display:block; image-rendering:pixelated;
+  }
+  .map-card .map-region{font-size:.62rem;color:var(--accent);margin-top:3px;}
+  .editor-nav{
+    display:flex; gap:8px; flex-wrap:wrap; align-items:center;
+    margin:0 0 10px; padding:8px 10px; background:var(--paper);
+    border:1px solid var(--panel-edge); border-radius:3px;
+  }
+  .editor-nav .current-map{
+    font-size:.75rem; flex:1; min-width:180px;
+  }
+  .pokedex-islands{
+    margin-top:16px; border-top:2px solid var(--panel-edge); padding-top:14px;
+  }
+  .pokedex-grid{
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(145px,1fr));
+    gap:7px; max-height:330px; overflow:auto; padding:2px;
+  }
+  .dex-item{
+    display:flex; align-items:center; gap:7px; padding:6px 7px;
+    background:#fff; border:1px solid var(--panel-edge); border-radius:3px;
+    font-size:.7rem; cursor:pointer;
+  }
+  .dex-item:hover{background:#f7f2e9;}
+  .dex-item input{accent-color:var(--red);}
+  .dex-item .dex-id{color:var(--accent);min-width:34px;}
+  .dex-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px;}
+  .dex-status{margin-top:7px;}
+</style>
 </head>
 <body>
 <div class="wrap">
@@ -250,7 +302,11 @@
 
   <div class="stage">
     <div id="baseImageGallerySection">
-      <h2 style="font-size:.85rem; text-transform:uppercase; letter-spacing:.06em; margin:0 0 8px;">Imágenes base guardadas</h2>
+      <div class="map-selector-head">
+        <h2 style="font-size:.85rem; text-transform:uppercase; letter-spacing:.06em; margin:0;">Escoger mapa</h2>
+        <span class="hint" style="margin:0;">Selecciona una región y luego el mapa base</span>
+      </div>
+      <div id="baseRegionTabs" class="region-tabs"></div>
       <div id="baseImageGallery" style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:14px;"></div>
     </div>
     <div class="dropzone" id="dropzone">
@@ -263,20 +319,22 @@
     <input type="file" id="fileInput" accept="image/*">
   </div>
 
+  <div class="editor-nav" id="editorNav" style="display:none;">
+    <button class="secondary" id="backToMapBtn">← Escoger mapa</button>
+    <button class="secondary" id="changeMapBtn">↔ Cambiar mapa</button>
+    <span class="current-map" id="currentMapLabel">Mapa actual: —</span>
+  </div>
+
   <div class="toolbar" id="toolbar" style="display:none;">
     <div class="group">
-      <button class="mode-btn active" id="modeBrush">Pincel</button>
-      <button class="mode-btn" id="modeArrow">Flecha</button>
-      <button class="mode-btn" id="modeLine">Línea recta</button>
-      <button class="mode-btn" id="modeCircle">Círculo</button>
-      <button class="mode-btn" id="modeOval">Óvalo</button>
+      <button class="mode-btn active" id="modeCircle">Círculo</button>
       <button class="mode-btn" id="modeRect">Rectángulo</button>
       <button class="mode-btn" id="modeMove">✥ Mover</button>
     </div>
     <div class="divider"></div>
     <div class="group">
       <label for="color">Color</label>
-      <input type="color" id="color" value="#c0392b">
+      <input type="color" id="color" value="#8b3a3a">
     </div>
     <div class="group">
       <label for="size">Grosor</label>
@@ -289,7 +347,8 @@
     <div class="divider"></div>
     <div class="group">
       <button class="secondary" id="undoBtn">Deshacer</button>
-      <button class="secondary" id="clearBtn">Borrar todo</button>
+      <button class="secondary" id="deleteSelectedBtn" disabled>🗑 Borrar seleccionado</button>
+       <button class="secondary" id="clearBtn">Borrar todo</button>
     </div>
     <div class="divider"></div>
     <div class="group">
@@ -297,11 +356,52 @@
     </div>
     <div class="divider"></div>
     <div class="group">
-      <button id="newImgBtn" class="secondary">Nueva imagen</button>
+      <button id="newImgBtn" class="secondary">← Escoger mapa</button>
       <button id="downloadBtn">Descargar</button>
     </div>
   </div>
-  <p class="hint" id="hint" style="display:none;">Pincel: dibuja arrastrando. Línea/Flecha/Círculo/Óvalo/Rectángulo: haz clic y arrastra desde el inicio hasta el final. Marca "Relleno" para figuras sólidas. "✥ Mover": haz clic sobre una marca existente y arrástrala a su nueva posición. "Animar marcas" hace que parpadeen (solo vista previa; la descarga se guarda fija).</p>
+  <p class="hint" id="hint" style="display:none;">Círculo/Rectángulo: haz clic y arrastra desde el inicio hasta el final (el rectángulo sale con esquinas redondeadas). Marca "Relleno" para figuras sólidas. "✥ Mover": haz clic sobre una marca existente y arrástrala a su nueva posición. Luego usa "🗑 Borrar seleccionado" (o la tecla Supr/Delete) para eliminar únicamente esa marca. "Animar marcas" hace que parpadeen (solo vista previa; la descarga se guarda fija).</p>
+
+  <div class="export-panel" id="coordsPanel" style="display:none;">
+    <h2>Áreas de hábitat (desde JSON)</h2>
+    <p class="hint" style="margin-top:-4px;">Elige Pokémon y ubicación para cargar el área completa desde el JSON. Las rutas/ciudades usan su área regional y las zonas especiales su marcador de hábitat.</p>
+    <div class="field-row">
+      <div class="field">
+        <label for="csvVersionSelect">Versión</label>
+        <select id="csvVersionSelect"></select>
+      </div>
+      <div class="field" style="flex:1.4;">
+        <label for="csvPokemonSelect">Pokémon</label>
+        <select id="csvPokemonSelect"></select>
+      </div>
+      <div class="field" style="flex:1.4;">
+        <label for="csvLocationSelect">Ubicación</label>
+        <select id="csvLocationSelect"></select>
+      </div>
+    </div>
+    <span class="status" id="jsonCoordsStatus"></span>
+
+    <h2 style="margin-top:16px;">Coordenadas manuales</h2>
+    <p class="hint" style="margin-top:-4px;">Las coordenadas manuales siguen disponibles si necesitas ajustar una ubicación. Usa la escala de una imagen de 960×640 (se ajusta sola si tu mapa es de otro tamaño).</p>
+    <div class="field-row">
+      <div class="field" style="max-width:120px;">
+        <label for="coordX">X (0–960)</label>
+        <input type="number" id="coordX" min="0" max="960" placeholder="ej. 272">
+      </div>
+      <div class="field" style="max-width:120px;">
+        <label for="coordY">Y (0–640)</label>
+        <input type="number" id="coordY" min="0" max="640" placeholder="ej. 304">
+      </div>
+      <div class="field" style="max-width:160px;">
+        <label for="coordPokemonId">Nº Pokédex (opcional)</label>
+        <input type="number" id="coordPokemonId" min="1" placeholder="ej. 25">
+      </div>
+    </div>
+    <div class="export-actions">
+      <button id="placeCoordBtn">Colocar marca aquí</button>
+      <span class="status" id="coordsStatus"></span>
+    </div>
+  </div>
 
   <div class="export-panel" id="exportPanel">
     <h2>1 · Generar GIF y subirlo a Cloudinary</h2>
@@ -418,16 +518,14 @@ const sizeInput = document.getElementById('size');
 const sizeLabel = document.getElementById('sizeLabel');
 const undoBtn = document.getElementById('undoBtn');
 const clearBtn = document.getElementById('clearBtn');
+const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
 const downloadBtn = document.getElementById('downloadBtn');
 const newImgBtn = document.getElementById('newImgBtn');
-const modeBrush = document.getElementById('modeBrush');
-const modeArrow = document.getElementById('modeArrow');
-const modeLine = document.getElementById('modeLine');
 const modeCircle = document.getElementById('modeCircle');
-const modeOval = document.getElementById('modeOval');
 const modeRect = document.getElementById('modeRect');
 const modeMove = document.getElementById('modeMove');
 const fillShapeInput = document.getElementById('fillShape');
+const coordsPanel = document.getElementById('coordsPanel');
 
 const exportPanel = document.getElementById('exportPanel');
 const cloudNameInput = document.getElementById('cloudName');
@@ -459,35 +557,155 @@ const fetchGifsStatus = document.getElementById('fetchGifsStatus');
 const activeGifNote = document.getElementById('activeGifNote');
 const baseImageGallery = document.getElementById('baseImageGallery');
 const baseImageGallerySection = document.getElementById('baseImageGallerySection');
+const baseRegionTabs = document.getElementById('baseRegionTabs');
+const editorNav = document.getElementById('editorNav');
+const backToMapBtn = document.getElementById('backToMapBtn');
+const changeMapBtn = document.getElementById('changeMapBtn');
+const currentMapLabel = document.getElementById('currentMapLabel');
+
+
+
+
+
+
+
+// Estado del editor: debe existir antes de cualquier callback que pueda cargar un mapa.
+let mode = 'circle';
+let strokes = []; // circle/rect manual or habitat {x,y,width,height,geometry,markerType}
+let currentStroke = null;
+let drawing = false;
+let selectedStroke = null;
+
+function updateDeleteButton(){
+  if (deleteSelectedBtn){
+    deleteSelectedBtn.disabled = !selectedStroke;
+  }
+}
+
+function deleteSelectedStroke(){
+  if (!selectedStroke) return;
+
+  const index = strokes.indexOf(selectedStroke);
+  if (index !== -1){
+    strokes.splice(index, 1);
+  }
+
+  selectedStroke = null;
+  updateDeleteButton();
+  redrawStrokes();
+}
+
+if (deleteSelectedBtn){
+  deleteSelectedBtn.addEventListener('click', deleteSelectedStroke);
+}
+
+window.addEventListener('keydown', e => {
+  if ((e.key === 'Delete' || e.key === 'Backspace') && selectedStroke){
+    const active = document.activeElement;
+    const typing = active && (
+      active.tagName === 'INPUT' ||
+      active.tagName === 'TEXTAREA' ||
+      active.tagName === 'SELECT'
+    );
+
+    if (!typing){
+      e.preventDefault();
+      deleteSelectedStroke();
+    }
+  }
+});
+
+
 
 // Base map images already uploaded to Cloudinary, ready to reuse without
 // picking a file from disk each time. The source of truth is mapas-base.json
 // (must sit next to this HTML file) — edit that file to add/remove maps.
 let presetBaseImages = [];
+let selectedBaseRegion = 'Kanto';
+let currentBasePreset = null;
+
+function getPresetRegion(preset){
+  if (preset.region) return preset.region;
+  const n = String(preset.name || '').toLowerCase();
+  if (n.includes('kanto')) return 'Kanto';
+  if (n.includes('prima')) return 'Islas Sete 1–3';
+  if (n.includes('quarta')) return 'Islas Sete 4–6';
+  if (n.includes('setima')) return 'Islas Sete 7+';
+  return 'Islas Sete';
+}
+
+function getBaseRegions(){
+  const regions = [...new Set(presetBaseImages.map(getPresetRegion))];
+  return regions.length ? regions : ['Kanto'];
+}
+
+function renderBaseRegionTabs(){
+  baseRegionTabs.innerHTML = '';
+  getBaseRegions().forEach(region => {
+    const btn = document.createElement('button');
+    btn.className = 'region-tab' + (region === selectedBaseRegion ? ' active' : '');
+    btn.textContent = region;
+    btn.onclick = () => {
+      selectedBaseRegion = region;
+      renderBaseRegionTabs();
+      renderBaseImageGallery();
+    };
+    baseRegionTabs.appendChild(btn);
+  });
+}
 
 function renderBaseImageGallery(){
   baseImageGallery.innerHTML = '';
-  if (presetBaseImages.length === 0){
-    baseImageGallerySection.style.display = 'none';
+  renderBaseRegionTabs();
+
+  const visible = presetBaseImages.filter(p => getPresetRegion(p) === selectedBaseRegion);
+
+  if (visible.length === 0){
+    baseImageGallery.innerHTML =
+      '<span class="hint">No hay mapas guardados para esta región.</span>';
     return;
   }
-  baseImageGallerySection.style.display = 'block';
-  presetBaseImages.forEach(preset => {
+
+  visible.forEach(preset => {
     const card = document.createElement('div');
-    card.style.cssText = 'width:130px; background:var(--panel); border:1px solid var(--panel-edge); border-radius:4px; padding:6px; text-align:center; cursor:pointer;';
-    const img = document.createElement('img');
-    img.src = preset.url;
-    img.style.cssText = 'width:100%; height:80px; object-fit:cover; border-radius:2px; display:block; image-rendering:pixelated;';
+    card.className = 'map-card' + (currentBasePreset?.url === preset.url ? ' active' : '');
+
+    const thumbnail = document.createElement('img');
+    thumbnail.src = preset.url;
+    thumbnail.alt = preset.name;
+    thumbnail.loading = 'lazy';
+
     const label = document.createElement('div');
     label.style.cssText = 'font-size:.7rem; margin-top:6px;';
     label.textContent = preset.name;
-    card.appendChild(img);
-    card.appendChild(label);
-    card.onclick = () => loadImageFromUrl(preset.url);
+
+    const region = document.createElement('div');
+    region.className = 'map-region';
+    region.textContent = getPresetRegion(preset);
+
+    card.append(thumbnail, label, region);
+    card.onclick = () => {
+      currentBasePreset = preset;
+      currentMapLabel.textContent = 'Mapa actual: ' + preset.name;
+      console.info('[Mapa] Seleccionando mapa guardado:', preset);
+      loadImageFromUrl(preset.url, preset);
+    };
     baseImageGallery.appendChild(card);
   });
 }
-renderBaseImageGallery();
+
+function showMapSelector(){
+
+  dropzone.style.display = 'none';
+  canvasHolder.style.display = 'none';
+  toolbar.style.display = 'none';
+  hint.style.display = 'none';
+  exportPanel.style.display = 'none';
+  coordsPanel.style.display = 'none';
+  editorNav.style.display = 'none';
+  baseImageGallerySection.style.display = 'block';
+  renderBaseImageGallery();
+}
 
 // Load the list from mapas-base.json. If it can't be reached (e.g. opening the
 // HTML directly from disk without a server), the gallery just stays empty and
@@ -502,17 +720,440 @@ fetch('./mapas-base.json')
   })
   .catch(() => { /* keep gallery empty, no error shown to the user */ });
 
-function loadImageFromUrl(url){
+function loadImageFromUrl(url, preset = null){
+  const originalUrl = String(url || '').trim();
+  if (preset) currentBasePreset = preset;
+
+  if (!originalUrl){
+    showBaseImageError('La imagen guardada no tiene una URL válida.');
+    return;
+  }
+
+  showBaseImageLoading(originalUrl);
+
   const image = new Image();
-  // Needed so the canvas isn't "tainted" — otherwise toBlob()/toDataURL() fail later
-  // (base.toBlob for the advanced base-upload path, and the final GIF export).
+
+  // Keep the image CORS-enabled because it will be copied to canvas and later
+  // exported with toBlob()/toDataURL()/GIF.js.
   image.crossOrigin = 'anonymous';
-  image.onload = () => setupCanvas(image);
-  image.onerror = () => {
-    dropzone.querySelector('p').innerHTML = 'No se pudo cargar esa imagen (revisa que el servidor permita CORS).<br><span style="font-size:.7rem;">Intenta subirla desde tu computadora en su lugar.</span>';
+  image.referrerPolicy = 'no-referrer';
+
+  let finished = false;
+
+  const finishError = (message, detail = '') => {
+    if (finished) return;
+    finished = true;
+
+    console.error('[Mapa] Error cargando imagen base:', {
+      url: originalUrl,
+      message,
+      detail
+    });
+
+    showBaseImageError(
+      `${message}` +
+      (detail ? `<br><span style="font-size:.7rem;">${detail}</span>` : '') +
+      `<br><span style="font-size:.7rem;">URL: ${escapeHtml(originalUrl)}</span>`
+    );
   };
-  image.src = url;
+
+  image.onload = () => {
+    if (finished) return;
+    finished = true;
+
+    if (!image.naturalWidth || !image.naturalHeight){
+      finishError('La imagen se recibió pero el navegador no pudo decodificarla.');
+      return;
+    }
+
+    console.info('[Mapa] Imagen base cargada:', {
+      url: originalUrl,
+      width: image.naturalWidth,
+      height: image.naturalHeight
+    });
+
+    setupCanvas(image);
+  };
+
+  image.onerror = () => {
+    finishError(
+      'No se pudo cargar la imagen guardada.',
+      'Comprueba la conexión, la URL de Cloudinary y que el recurso siga siendo público.'
+    );
+  };
+
+  // Avoid an old browser/CDN cache entry.
+  const separator = originalUrl.includes('?') ? '&' : '?';
+  image.src = originalUrl + separator + 'cb=' + Date.now();
 }
+
+function escapeHtml(value){
+  return String(value).replace(/[&<>"']/g, ch => ({
+    '&':'&amp;',
+    '<':'&lt;',
+    '>':'&gt;',
+    '"':'&quot;',
+    "'":'&#39;'
+  }[ch]));
+}
+
+function showBaseImageLoading(url){
+  const p = dropzone.querySelector('p');
+  p.innerHTML =
+    'Cargando imagen base guardada…' +
+    '<br><span style="font-size:.7rem;">' +
+    'Cloudinary → Canvas' +
+    '</span>';
+  dropzone.classList.add('loading');
+}
+
+function showBaseImageError(message){
+  const p = dropzone.querySelector('p');
+  p.innerHTML =
+    message +
+    '<br><button type="button" id="retrySavedImageBtn" class="secondary" ' +
+    'style="margin-top:8px;">Reintentar</button>';
+
+  dropzone.classList.remove('loading');
+
+  const retry = document.getElementById('retrySavedImageBtn');
+  if (retry){
+    retry.onclick = e => {
+      e.stopPropagation();
+      // Re-render the gallery so the user can select the saved map again.
+      renderBaseImageGallery();
+    };
+  }
+}
+
+// --- Sevii Islands markers ---
+// Source-backed coordinates from FireRed/LeafGreen region-map sections.
+// Do not use the old Pokédex data here; this is only map-marker geometry.
+const SEVII_MARKERS = {
+  "coordinateSystem": "sevii_region_map_960x640",
+  "sourceFormula": "pixel_240 = 8 * cursor + 36; pixel_960 = pixel_240 * 4",
+  "maps": [
+    {
+      "id": "sevii_1_3",
+      "name": "Islas Prima, Secunda y Tera",
+      "image": "Mapa_de_las_islas_Prima%2C_Secunda_y_Tera_en_Rojo_Fuego_960x640.png",
+      "markers": [
+        {
+          "id": "one_island",
+          "name": "Isla Prima",
+          "mapSection": "MAPSEC_ONE_ISLAND",
+          "cursor": {
+            "x": 1,
+            "y": 8
+          },
+          "x": 176,
+          "y": 400
+        },
+        {
+          "id": "two_island",
+          "name": "Isla Secunda",
+          "mapSection": "MAPSEC_TWO_ISLAND",
+          "cursor": {
+            "x": 9,
+            "y": 9
+          },
+          "x": 432,
+          "y": 432
+        },
+        {
+          "id": "three_island",
+          "name": "Isla Tera",
+          "mapSection": "MAPSEC_THREE_ISLAND",
+          "cursor": {
+            "x": 18,
+            "y": 12
+          },
+          "x": 720,
+          "y": 528
+        }
+      ]
+    },
+    {
+      "id": "sevii_4_5",
+      "name": "Islas Quarta, Inta y Exta",
+      "image": "Mapa_de_las_islas_Quarta%2C_Inta_y_Exta_en_Rojo_Fuego_960x640.png",
+      "markers": [
+        {
+          "id": "four_island",
+          "name": "Isla Quarta",
+          "mapSection": "MAPSEC_FOUR_ISLAND",
+          "cursor": {
+            "x": 3,
+            "y": 4
+          },
+          "x": 240,
+          "y": 272
+        },
+        {
+          "id": "five_island",
+          "name": "Isla Inta",
+          "mapSection": "MAPSEC_FIVE_ISLAND",
+          "cursor": {
+            "x": 16,
+            "y": 11
+          },
+          "x": 656,
+          "y": 496
+        }
+      ]
+    },
+    {
+      "id": "sevii_6_7",
+      "name": "Islas Sexta y Séptima",
+      "image": "Mapa_de_las_islas_S%3Ftima%2C_Ombligo_y_Origen_en_Rojo_Fuego_960x640.png",
+      "markers": [
+        {
+          "id": "six_island",
+          "name": "Isla Sexta",
+          "mapSection": "MAPSEC_SIX_ISLAND",
+          "cursor": {
+            "x": 17,
+            "y": 5
+          },
+          "x": 688,
+          "y": 304
+        },
+        {
+          "id": "seven_island",
+          "name": "Isla Séptima",
+          "mapSection": "MAPSEC_SEVEN_ISLAND",
+          "cursor": {
+            "x": 5,
+            "y": 8
+          },
+          "x": 304,
+          "y": 400
+        }
+      ]
+    }
+  ]
+};
+
+// --- Known habitat areas from JSON (FireRed + LeafGreen) ---
+const csvVersionSelect = document.getElementById('csvVersionSelect');
+const csvPokemonSelect = document.getElementById('csvPokemonSelect');
+const csvLocationSelect = document.getElementById('csvLocationSelect');
+const jsonCoordsStatus = document.getElementById('jsonCoordsStatus');
+
+let coordRecords = []; // JSON records in the supplied 960x640 map space
+// Region-map areas use section CENTER coordinates; special habitat anchors
+// retain their source marker coordinates.
+
+function populateCoordSelects(){
+  const versions = [...new Set(coordRecords.map(r => r.version))].sort();
+
+  csvVersionSelect.innerHTML = versions.map(v =>
+    `<option value="${v}">${v}</option>`
+  ).join('');
+
+  populatePokemonSelect();
+}
+
+function populatePokemonSelect(){
+  const version = csvVersionSelect.value;
+  const seen = new Map();
+
+  coordRecords
+    .filter(r => r.version === version)
+    .forEach(r => {
+      if (!seen.has(r.pokemonId)) seen.set(r.pokemonId, r.pokemon);
+    });
+
+  const entries = [...seen.entries()].sort((a,b) => a[0] - b[0]);
+
+  csvPokemonSelect.innerHTML = entries.map(([id, name]) =>
+    `<option value="${id}">#${String(id).padStart(3, '0')} ${name}</option>`
+  ).join('');
+
+  populateLocationSelect();
+}
+
+function populateLocationSelect(){
+  const version = csvVersionSelect.value;
+  const pokemonId = Number(csvPokemonSelect.value);
+
+  const locs = coordRecords.filter(
+    r => r.version === version && r.pokemonId === pokemonId
+  );
+
+  csvLocationSelect.innerHTML = locs.map((r, i) =>
+    `<option value="${i}">
+      ${r.location} · ${r.geometry} · ${r.width}×${r.height}
+    </option>`
+  ).join('');
+
+  csvLocationSelect.dataset.records = JSON.stringify(locs);
+  fillFromSelectedLocation();
+}
+
+function fillFromSelectedLocation(){
+  const locs = JSON.parse(csvLocationSelect.dataset.records || '[]');
+  const record = locs[Number(csvLocationSelect.value)];
+
+  if (!record) return;
+
+  coordX.value = record.x;
+  coordY.value = record.y;
+  coordPokemonId.value = record.pokemonId;
+
+  jsonCoordsStatus.textContent =
+    `${record.location}: ${record.geometry}, ` +
+    `${record.width}×${record.height}px · centro (${record.x}, ${record.y})`;
+
+  jsonCoordsStatus.className = 'status ok';
+}
+
+csvVersionSelect.addEventListener('change', populatePokemonSelect);
+csvPokemonSelect.addEventListener('change', populateLocationSelect);
+csvLocationSelect.addEventListener('change', fillFromSelectedLocation);
+
+// The definitive habitat data is stored as JSON next to index.html.
+fetch('./rojo_fuego_verde_hoja_final_960x640_corregido.json?v=5')
+  .then(res => {
+    if (!res.ok) throw new Error('JSON de hábitat no encontrado');
+    return res.json();
+  })
+  .then(list => {
+    if (!Array.isArray(list) || !list.length)
+      throw new Error('El JSON no contiene registros');
+
+    coordRecords = list;
+    populateCoordSelects();
+
+    jsonCoordsStatus.textContent =
+      `${coordRecords.length} asociaciones de hábitat cargadas desde JSON.`;
+
+    jsonCoordsStatus.className = 'status ok';
+  })
+  .catch(err => {
+    console.error(err);
+
+    jsonCoordsStatus.textContent =
+      'No se pudo cargar el JSON de hábitat. Verifica que esté junto a index.html.';
+
+    jsonCoordsStatus.className = 'status error';
+  });
+
+// --- Manual coordinates / selected JSON habitat area ---
+const coordX = document.getElementById('coordX');
+const coordY = document.getElementById('coordY');
+const coordPokemonId = document.getElementById('coordPokemonId');
+const placeCoordBtn = document.getElementById('placeCoordBtn');
+const coordsStatus = document.getElementById('coordsStatus');
+
+let pendingPokemonFromCsv = [];
+
+function getSelectedCoordRecord(){
+  const locs = JSON.parse(csvLocationSelect.dataset.records || '[]');
+  return locs[Number(csvLocationSelect.value)] || null;
+}
+
+function createHabitatStroke(record){
+  // The JSON stores the area in the ORIGINAL 960x640 map coordinate system.
+  // Use left/top as the source of truth for region-map areas. This avoids
+  // accidentally treating x/y as a top-left coordinate or as a marker anchor.
+  const scaleX = base.width / 960;
+  const scaleY = base.height / 640;
+
+  const left = Number(record.left);
+  const top = Number(record.top);
+  const width = Number(record.width);
+  const height = Number(record.height);
+
+  return {
+    type: 'habitat',
+    geometry: record.geometry,
+    markerType: record.markerType,
+    x: (left + width / 2) * scaleX,
+    y: (top + height / 2) * scaleY,
+    width: width * scaleX,
+    height: height * scaleY,
+    color: colorInput.value,
+    opacity: 0.42,
+    size: 2
+  };
+}
+
+placeCoordBtn.onclick = async () => {
+  const rawX = parseFloat(coordX.value);
+  const rawY = parseFloat(coordY.value);
+
+  coordsStatus.textContent = '';
+  coordsStatus.className = 'status';
+
+  if (isNaN(rawX) || isNaN(rawY)){
+    coordsStatus.textContent = 'Escribe X e Y.';
+    coordsStatus.className = 'status error';
+    return;
+  }
+
+  const selectedRecord = getSelectedCoordRecord();
+
+  if (selectedRecord){
+    // IMPORTANT: use the complete area from JSON.
+    // left/top/width/height are the authoritative region-map geometry.
+    strokes.push(createHabitatStroke(selectedRecord));
+    redrawStrokes();
+
+    coordsStatus.textContent =
+      `${selectedRecord.location} marcada: ` +
+      `${selectedRecord.geometry}, ` +
+      `${selectedRecord.width}×${selectedRecord.height}px ` +
+      `en (${selectedRecord.left}, ${selectedRecord.top}) ` +
+      `del mapa 960×640.`;
+
+    coordsStatus.className = 'status ok';
+  } else {
+    // Manual mode remains available.
+    const scaleX = base.width / 960;
+    const scaleY = base.height / 640;
+    const x = rawX * scaleX;
+    const y = rawY * scaleY;
+    const size = parseInt(sizeInput.value, 10);
+
+    strokes.push({
+      type: 'circle',
+      color: colorInput.value,
+      size,
+      fill: fillShapeInput.checked,
+      points: [{ x, y }, { x: x + size, y }]
+    });
+
+    redrawStrokes();
+
+    coordsStatus.textContent =
+      `Marca manual colocada en (${rawX}, ${rawY}).`;
+
+    coordsStatus.className = 'status ok';
+  }
+
+  const pokemonId = parseInt(coordPokemonId.value, 10);
+
+  if (pokemonId && !pendingPokemonFromCsv.some(p => p.id === pokemonId)){
+    let name = 'Pokémon #' + pokemonId;
+
+    try {
+      const res = await fetch(
+        'https://pokeapi.co/api/v2/pokemon/' + pokemonId
+      );
+
+      if (res.ok){
+        const data = await res.json();
+        name = data.name;
+      }
+    } catch (e) {}
+
+    pendingPokemonFromCsv.push({ id: pokemonId, name });
+
+    coordsStatus.textContent +=
+      ` Se asociará a #${pokemonId} ${name} al generar el GIF.`;
+  }
+};
 
 // Every GIF generated/loaded in this session, so the user can come back
 // and finish associating Pokémon later without re-uploading anything.
@@ -525,53 +1166,6 @@ let gifAsset = null; // { publicId, secureUrl, width, height }
 // Pokémon (by Pokédex number) associated with the current GIF: [{ id, name, sprite }]
 let associatedPokemon = [];
 
-
-let mode = 'brush';
-let strokes = []; // each stroke: {type, color, size, points:[{x,y}]}
-let currentStroke = null;
-let drawing = false;
-let img = null;
-
-let selectedStroke = null;
-
-function setMode(m){
-  mode = m;
-  [modeBrush, modeArrow, modeLine, modeCircle, modeOval, modeRect, modeMove].forEach(b => b.classList.remove('active'));
-  ({brush:modeBrush, arrow:modeArrow, line:modeLine, circle:modeCircle, oval:modeOval, rect:modeRect, move:modeMove})[m].classList.add('active');
-  draw.classList.toggle('move-mode', m === 'move');
-  if (m !== 'move'){ selectedStroke = null; redrawStrokes(); }
-}
-modeBrush.onclick = () => setMode('brush');
-modeArrow.onclick = () => setMode('arrow');
-modeLine.onclick = () => setMode('line');
-modeCircle.onclick = () => setMode('circle');
-modeOval.onclick = () => setMode('oval');
-modeRect.onclick = () => setMode('rect');
-modeMove.onclick = () => setMode('move');
-
-sizeInput.oninput = () => sizeLabel.textContent = sizeInput.value + 'px';
-
-// --- File loading ---
-dropzone.onclick = () => fileInput.click();
-dropzone.ondragover = e => { e.preventDefault(); dropzone.classList.add('drag'); };
-dropzone.ondragleave = () => dropzone.classList.remove('drag');
-dropzone.ondrop = e => {
-  e.preventDefault();
-  dropzone.classList.remove('drag');
-  if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
-};
-fileInput.onchange = () => { if (fileInput.files[0]) loadFile(fileInput.files[0]); };
-
-function loadFile(file){
-  const reader = new FileReader();
-  reader.onload = ev => {
-    const image = new Image();
-    image.onload = () => setupCanvas(image);
-    image.src = ev.target.result;
-  };
-  reader.readAsDataURL(file);
-}
-
 function setupCanvas(image){
   img = image;
   const maxW = 900;
@@ -581,13 +1175,17 @@ function setupCanvas(image){
   bctx.drawImage(image, 0, 0, w, h);
   strokes = [];
   selectedStroke = null;
+  updateDeleteButton();
   redrawStrokes();
   dropzone.style.display = 'none';
   baseImageGallerySection.style.display = 'none';
+  editorNav.style.display = 'flex';
+  currentMapLabel.textContent = 'Mapa actual: ' + (currentBasePreset?.name || 'Imagen cargada');
   canvasHolder.style.display = 'inline-block';
   toolbar.style.display = 'flex';
   hint.style.display = 'block';
   exportPanel.style.display = 'block';
+  coordsPanel.style.display = 'block';
   resultUrl.style.display = 'none';
   exportStatus.textContent = '';
   exportStatus.className = 'status';
@@ -598,22 +1196,36 @@ function setupCanvas(image){
   variantStatus.textContent = '';
   saveVariantBtn.disabled = true;
   associatedPokemon = [];
+
   renderPokemonChips();
+
+  pendingPokemonFromCsv = [];
+  coordX.value = '';
+  coordY.value = '';
+  coordPokemonId.value = '';
+  coordsStatus.textContent = '';
   gifPreview.style.display = 'none';
   activeGifNote.style.display = 'none';
 }
 
 newImgBtn.onclick = () => {
-  dropzone.style.display = 'flex';
-  dropzone.querySelector('p').innerHTML = 'Arrastra una imagen aquí o haz clic para elegirla<br><span style="font-size:.7rem;">JPG, PNG o WebP</span>';
-  renderBaseImageGallery();
-  canvasHolder.style.display = 'none';
-  toolbar.style.display = 'none';
-  hint.style.display = 'none';
-  fileInput.value = '';
-  strokes = [];
-  exportPanel.style.display = 'none';
+  currentBasePreset = null;
+  showMapSelector();
 };
+backToMapBtn.onclick = () => {
+  if (strokes.length && !confirm('Volver a escoger mapa eliminará las marcas actuales. ¿Continuar?')) return;
+  strokes = [];
+  currentBasePreset = null;
+  showMapSelector();
+};
+
+changeMapBtn.onclick = () => {
+  if (strokes.length && !confirm('Cambiar de mapa eliminará las marcas actuales. ¿Continuar?')) return;
+  strokes = [];
+  currentBasePreset = null;
+  showMapSelector();
+};
+
 
 // --- Drawing ---
 function getPos(e){
@@ -629,17 +1241,40 @@ let dragOffset = null;   // {x,y} pointer offset from stroke's reference point a
 let dragInitialPoints = null;
 
 function getBBox(s){
+  if (s.type === 'habitat'){
+    return {
+      minX: s.x - s.width / 2,
+      maxX: s.x + s.width / 2,
+      minY: s.y - s.height / 2,
+      maxY: s.y + s.height / 2
+    };
+  }
+
   const xs = s.points.map(p => p.x);
   const ys = s.points.map(p => p.y);
   let minX = Math.min(...xs), maxX = Math.max(...xs);
   let minY = Math.min(...ys), maxY = Math.max(...ys);
+
   if (s.type === 'circle' && s.points.length > 1){
-    const r = Math.hypot(s.points[1].x - s.points[0].x, s.points[1].y - s.points[0].y);
-    minX = s.points[0].x - r; maxX = s.points[0].x + r;
-    minY = s.points[0].y - r; maxY = s.points[0].y + r;
+    const r = Math.hypot(
+      s.points[1].x - s.points[0].x,
+      s.points[1].y - s.points[0].y
+    );
+
+    minX = s.points[0].x - r;
+    maxX = s.points[0].x + r;
+    minY = s.points[0].y - r;
+    maxY = s.points[0].y + r;
   }
+
   const pad = (s.size || 10) / 2 + 8;
-  return { minX: minX - pad, maxX: maxX + pad, minY: minY - pad, maxY: maxY + pad };
+
+  return {
+    minX: minX - pad,
+    maxX: maxX + pad,
+    minY: minY - pad,
+    maxY: maxY + pad
+  };
 }
 
 function findStrokeAt(pos){
@@ -669,11 +1304,14 @@ function startDraw(e){
   if (mode === 'move'){
     const hit = findStrokeAt(pos);
     selectedStroke = hit;
+    updateDeleteButton();
     if (hit){
       drawing = true;
       draw.classList.add('dragging');
       dragOffset = pos;
-      dragInitialPoints = hit.points.map(p => ({ x: p.x, y: p.y }));
+      dragInitialPoints = hit.type === 'habitat'
+        ? { x: hit.x, y: hit.y }
+        : hit.points.map(p => ({ x: p.x, y: p.y }));
     }
     redrawStrokes();
     return;
@@ -698,17 +1336,22 @@ function moveDraw(e){
     if (!selectedStroke) return;
     const dx = pos.x - dragOffset.x;
     const dy = pos.y - dragOffset.y;
-    selectedStroke.points = dragInitialPoints.map(p => ({ x: p.x + dx, y: p.y + dy }));
+    if (selectedStroke.type === 'habitat'){
+      selectedStroke.x = dragInitialPoints.x + dx;
+      selectedStroke.y = dragInitialPoints.y + dy;
+    } else {
+      selectedStroke.points = dragInitialPoints.map(p => ({
+        x: p.x + dx,
+        y: p.y + dy
+      }));
+    }
+
     redrawStrokes();
     return;
   }
 
-  if (mode === 'brush'){
-    currentStroke.points.push(pos);
-  } else {
-    // line/arrow/circle/oval/rect: only start + current end
-    currentStroke.points = [currentStroke.points[0], pos];
-  }
+  // circle/rect: only start + current end
+  currentStroke.points = [currentStroke.points[0], pos];
   redrawStrokes();
   drawStroke(dctx, currentStroke);
 }
@@ -726,9 +1369,6 @@ function endDraw(e){
 
   if (currentStroke && currentStroke.points.length > 1){
     strokes.push(currentStroke);
-  } else if (currentStroke && mode === 'brush' && currentStroke.points.length === 1){
-    // single click dot
-    strokes.push(currentStroke);
   }
   currentStroke = null;
   redrawStrokes();
@@ -740,6 +1380,22 @@ window.addEventListener('mouseup', endDraw);
 draw.addEventListener('touchstart', startDraw, {passive:false});
 draw.addEventListener('touchmove', moveDraw, {passive:false});
 draw.addEventListener('touchend', endDraw);
+
+window.addEventListener('keydown', e => {
+  if ((e.key === 'Delete' || e.key === 'Backspace') && selectedStroke){
+    const active = document.activeElement;
+    const typing = active && (
+      active.tagName === 'INPUT' ||
+      active.tagName === 'TEXTAREA' ||
+      active.tagName === 'SELECT'
+    );
+
+    if (!typing){
+      e.preventDefault();
+      deleteSelectedStroke();
+    }
+  }
+});
 
 function redrawStrokes(){
   dctx.clearRect(0, 0, draw.width, draw.height);
@@ -756,52 +1412,50 @@ function drawStroke(ctx, s){
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
 
-  if (s.type === 'brush'){
-    if (s.points.length === 1){
-      const p = s.points[0];
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, s.size/2, 0, Math.PI*2);
-      ctx.fill();
-      return;
+  if (s.type === 'habitat'){
+    const left = s.x - s.width / 2;
+    const top = s.y - s.height / 2;
+
+    ctx.save();
+    ctx.globalAlpha = s.opacity ?? 0.42;
+
+    // CSV geometry:
+    // - region_map_area: fill the complete region-map area.
+    // - habitat_marker_anchor: use the circular habitat marker anchor.
+    ctx.beginPath();
+
+    if (s.geometry === 'habitat_marker_anchor' || s.markerType === 'circular'){
+      ctx.ellipse(
+        s.x,
+        s.y,
+        s.width / 2,
+        s.height / 2,
+        0,
+        0,
+        Math.PI * 2
+      );
+    } else {
+      const radius = Math.min(6, s.width / 4, s.height / 4);
+
+      ctx.moveTo(left + radius, top);
+      ctx.arcTo(left + s.width, top, left + s.width, top + s.height, radius);
+      ctx.arcTo(left + s.width, top + s.height, left, top + s.height, radius);
+      ctx.arcTo(left, top + s.height, left, top, radius);
+      ctx.arcTo(left, top, left + s.width, top, radius);
+      ctx.closePath();
     }
-    ctx.beginPath();
-    ctx.moveTo(s.points[0].x, s.points[0].y);
-    for (let i=1;i<s.points.length;i++) ctx.lineTo(s.points[i].x, s.points[i].y);
-    ctx.stroke();
-  } else if (s.type === 'line'){
-    const [p0, p1] = s.points;
-    ctx.beginPath();
-    ctx.moveTo(p0.x, p0.y);
-    ctx.lineTo(p1.x, p1.y);
-    ctx.stroke();
-  } else if (s.type === 'arrow'){
-    const [p0, p1] = s.points;
-    ctx.beginPath();
-    ctx.moveTo(p0.x, p0.y);
-    ctx.lineTo(p1.x, p1.y);
-    ctx.stroke();
-    const angle = Math.atan2(p1.y - p0.y, p1.x - p0.x);
-    const headLen = Math.max(14, s.size * 1.8);
-    ctx.beginPath();
-    ctx.moveTo(p1.x, p1.y);
-    ctx.lineTo(p1.x - headLen*Math.cos(angle - Math.PI/6), p1.y - headLen*Math.sin(angle - Math.PI/6));
-    ctx.lineTo(p1.x - headLen*Math.cos(angle + Math.PI/6), p1.y - headLen*Math.sin(angle + Math.PI/6));
-    ctx.closePath();
+
     ctx.fill();
+
+    ctx.globalAlpha = Math.min(1, (s.opacity ?? 0.42) + 0.25);
+    ctx.stroke();
+
+    ctx.restore();
   } else if (s.type === 'circle'){
     const [p0, p1] = s.points;
     const r = Math.hypot(p1.x - p0.x, p1.y - p0.y);
     ctx.beginPath();
     ctx.arc(p0.x, p0.y, r, 0, Math.PI*2);
-    if (s.fill) ctx.fill(); else ctx.stroke();
-  } else if (s.type === 'oval'){
-    const [p0, p1] = s.points;
-    const cx = (p0.x + p1.x) / 2;
-    const cy = (p0.y + p1.y) / 2;
-    const rx = Math.abs(p1.x - p0.x) / 2;
-    const ry = Math.abs(p1.y - p0.y) / 2;
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, rx || 1, ry || 1, 0, 0, Math.PI*2);
     if (s.fill) ctx.fill(); else ctx.stroke();
   } else if (s.type === 'rect'){
     const [p0, p1] = s.points;
@@ -809,7 +1463,15 @@ function drawStroke(ctx, s){
     const y = Math.min(p0.y, p1.y);
     const w = Math.abs(p1.x - p0.x);
     const h = Math.abs(p1.y - p0.y);
-    if (s.fill) ctx.fillRect(x, y, w, h); else ctx.strokeRect(x, y, w, h);
+    const radius = Math.min(16, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.arcTo(x + w, y, x + w, y + h, radius);
+    ctx.arcTo(x + w, y + h, x, y + h, radius);
+    ctx.arcTo(x, y + h, x, y, radius);
+    ctx.arcTo(x, y, x + w, y, radius);
+    ctx.closePath();
+    if (s.fill) ctx.fill(); else ctx.stroke();
   }
 }
 
@@ -821,6 +1483,7 @@ undoBtn.onclick = () => {
 clearBtn.onclick = () => {
   strokes = [];
   selectedStroke = null;
+  updateDeleteButton();
   redrawStrokes();
 };
 
@@ -997,7 +1660,14 @@ generateGifBtn.onclick = async () => {
     setStatus('Listo. Puedes asociar Pokémon ahora (paso 2) o guardarlo así y volver después.', 'ok');
     saveVariantBtn.disabled = false;
 
-    const entry = { publicId: gifAsset.publicId, secureUrl: gifAsset.secureUrl, width: gifAsset.width, height: gifAsset.height, pokemonIds: [] };
+    const entry = {
+      publicId: gifAsset.publicId,
+      secureUrl: gifAsset.secureUrl,
+      width: gifAsset.width,
+      height: gifAsset.height,
+      pokemonIds: pendingPokemonFromCsv.map(p => p.id)
+    };
+    pendingPokemonFromCsv = [];
     sessionGifs.push(entry);
     selectGifEntry(entry);
     renderGifGallery();

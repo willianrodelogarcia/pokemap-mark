@@ -1,0 +1,104 @@
+{
+  "coordinateSystem": "sevii_region_map_960x640",
+  "sourceFormula": "pixel_240 = 8 * cursor + 36; pixel_960 = pixel_240 * 4",
+  "maps": [
+    {
+      "id": "sevii_1_3",
+      "name": "Islas Prima, Secunda y Tera",
+      "image": "Mapa_de_las_islas_Prima%2C_Secunda_y_Tera_en_Rojo_Fuego_960x640.png",
+      "markers": [
+        {
+          "id": "one_island",
+          "name": "Isla Prima",
+          "mapSection": "MAPSEC_ONE_ISLAND",
+          "cursor": {
+            "x": 1,
+            "y": 8
+          },
+          "x": 176,
+          "y": 400
+        },
+        {
+          "id": "two_island",
+          "name": "Isla Secunda",
+          "mapSection": "MAPSEC_TWO_ISLAND",
+          "cursor": {
+            "x": 9,
+            "y": 9
+          },
+          "x": 432,
+          "y": 432
+        },
+        {
+          "id": "three_island",
+          "name": "Isla Tera",
+          "mapSection": "MAPSEC_THREE_ISLAND",
+          "cursor": {
+            "x": 18,
+            "y": 12
+          },
+          "x": 720,
+          "y": 528
+        }
+      ]
+    },
+    {
+      "id": "sevii_4_5",
+      "name": "Islas Quarta, Inta y Exta",
+      "image": "Mapa_de_las_islas_Quarta%2C_Inta_y_Exta_en_Rojo_Fuego_960x640.png",
+      "markers": [
+        {
+          "id": "four_island",
+          "name": "Isla Quarta",
+          "mapSection": "MAPSEC_FOUR_ISLAND",
+          "cursor": {
+            "x": 3,
+            "y": 4
+          },
+          "x": 240,
+          "y": 272
+        },
+        {
+          "id": "five_island",
+          "name": "Isla Inta",
+          "mapSection": "MAPSEC_FIVE_ISLAND",
+          "cursor": {
+            "x": 16,
+            "y": 11
+          },
+          "x": 656,
+          "y": 496
+        }
+      ]
+    },
+    {
+      "id": "sevii_6_7",
+      "name": "Islas Sexta y Séptima",
+      "image": "Mapa_de_las_islas_S%3Ftima%2C_Ombligo_y_Origen_en_Rojo_Fuego_960x640.png",
+      "markers": [
+        {
+          "id": "six_island",
+          "name": "Isla Sexta",
+          "mapSection": "MAPSEC_SIX_ISLAND",
+          "cursor": {
+            "x": 17,
+            "y": 5
+          },
+          "x": 688,
+          "y": 304
+        },
+        {
+          "id": "seven_island",
+          "name": "Isla Séptima",
+          "mapSection": "MAPSEC_SEVEN_ISLAND",
+          "cursor": {
+            "x": 5,
+            "y": 8
+          },
+          "x": 304,
+          "y": 400
+        }
+      ]
+    }
+  ]
+}
