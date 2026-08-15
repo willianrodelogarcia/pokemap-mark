@@ -379,7 +379,11 @@
         <select id="csvLocationSelect"></select>
       </div>
     </div>
-    <span class="status" id="jsonCoordsStatus"></span>
+    <span class="status" id="jsonCoordsStatus"></span><div id="seviiExampleNote" class="hint" style="margin-top:8px; display:none;">
+  Ejemplo: <strong>Magikarp #129</strong> marcado en <strong>Isla Prima</strong>.
+  Es un marcador de demostración basado en el punto de la isla en el mapa regional.
+</div>
+
 
     <h2 style="margin-top:16px;">Coordenadas manuales</h2>
     <p class="hint" style="margin-top:-4px;">Las coordenadas manuales siguen disponibles si necesitas ajustar una ubicación. Usa la escala de una imagen de 960×640 (se ajusta sola si tu mapa es de otro tamaño).</p>
@@ -516,6 +520,14 @@ const dctx = draw.getContext('2d');
 const colorInput = document.getElementById('color');
 const sizeInput = document.getElementById('size');
 const sizeLabel = document.getElementById('sizeLabel');
+
+function updateSizeLabel(){
+  sizeLabel.textContent = `${sizeInput.value}px`;
+}
+
+sizeInput.addEventListener('input', updateSizeLabel);
+sizeInput.addEventListener('change', updateSizeLabel);
+updateSizeLabel();
 const undoBtn = document.getElementById('undoBtn');
 const clearBtn = document.getElementById('clearBtn');
 const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
@@ -575,6 +587,33 @@ let strokes = []; // circle/rect manual or habitat {x,y,width,height,geometry,ma
 let currentStroke = null;
 let drawing = false;
 let selectedStroke = null;
+
+// Cambia el modo de edición y actualiza visualmente los botones.
+// Esta función es necesaria porque los botones solo existían en el HTML;
+// el archivo no tenía listeners que modificaran `mode`.
+function setMode(nextMode){
+  if (!['circle', 'rect', 'move'].includes(nextMode)) return;
+
+  mode = nextMode;
+
+  modeCircle.classList.toggle('active', mode === 'circle');
+  modeRect.classList.toggle('active', mode === 'rect');
+  modeMove.classList.toggle('active', mode === 'move');
+
+  draw.classList.toggle('move-mode', mode === 'move');
+
+  // La selección solo tiene sentido mientras estamos en modo Mover.
+  if (mode !== 'move'){
+    selectedStroke = null;
+    updateDeleteButton();
+  }
+
+  redrawStrokes();
+}
+
+modeCircle.addEventListener('click', () => setMode('circle'));
+modeRect.addEventListener('click', () => setMode('rect'));
+modeMove.addEventListener('click', () => setMode('move'));
 
 function updateDeleteButton(){
   if (deleteSelectedBtn){
@@ -1013,7 +1052,7 @@ csvPokemonSelect.addEventListener('change', populateLocationSelect);
 csvLocationSelect.addEventListener('change', fillFromSelectedLocation);
 
 // The definitive habitat data is stored as JSON next to index.html.
-fetch('./rojo_fuego_verde_hoja_final_960x640_corregido.json?v=5')
+fetch('./rojo_fuego_verde_hoja_final_960x640_corregido.json')
   .then(res => {
     if (!res.ok) throw new Error('JSON de hábitat no encontrado');
     return res.json();
@@ -1060,17 +1099,50 @@ function createHabitatStroke(record){
   const scaleX = base.width / 960;
   const scaleY = base.height / 640;
 
-  const left = Number(record.left);
-  const top = Number(record.top);
   const width = Number(record.width);
   const height = Number(record.height);
+
+  if (!Number.isFinite(width) || !Number.isFinite(height)){
+    throw new Error(`Área inválida para ${record.location}: width/height no son numéricos.`);
+  }
+
+  // Normal region-map records store the rectangle as left/top.
+  // Sevii island anchor records store x/y as the CENTER of the marker.
+  let centerX;
+  let centerY;
+
+  if (
+    record.geometry === 'sevii_island_anchor' ||
+    record.markerType === 'island'
+  ){
+    centerX = Number(record.x);
+    centerY = Number(record.y);
+  } else {
+    const left = Number(record.left);
+    const top = Number(record.top);
+
+    if (!Number.isFinite(left) || !Number.isFinite(top)){
+      throw new Error(`Área inválida para ${record.location}: faltan left/top.`);
+    }
+
+    centerX = left + width / 2;
+    centerY = top + height / 2;
+  }
+
+  if (!Number.isFinite(centerX) || !Number.isFinite(centerY)){
+    throw new Error(`Coordenadas inválidas para ${record.location}.`);
+  }
 
   return {
     type: 'habitat',
     geometry: record.geometry,
     markerType: record.markerType,
-    x: (left + width / 2) * scaleX,
-    y: (top + height / 2) * scaleY,
+    pokemonId: record.pokemonId,
+    pokemonName: record.pokemon,
+    location: record.location,
+    island: record.island,
+    x: centerX * scaleX,
+    y: centerY * scaleY,
     width: width * scaleX,
     height: height * scaleY,
     color: colorInput.value,
@@ -1104,7 +1176,7 @@ placeCoordBtn.onclick = async () => {
       `${selectedRecord.location} marcada: ` +
       `${selectedRecord.geometry}, ` +
       `${selectedRecord.width}×${selectedRecord.height}px ` +
-      `en (${selectedRecord.left}, ${selectedRecord.top}) ` +
+      `en (${selectedRecord.x}, ${selectedRecord.y}) ` +
       `del mapa 960×640.`;
 
     coordsStatus.className = 'status ok';
@@ -1181,6 +1253,13 @@ function setupCanvas(image){
   baseImageGallerySection.style.display = 'none';
   editorNav.style.display = 'flex';
   currentMapLabel.textContent = 'Mapa actual: ' + (currentBasePreset?.name || 'Imagen cargada');
+  const seviiExampleNote = document.getElementById('seviiExampleNote');
+  if (seviiExampleNote){
+    seviiExampleNote.style.display =
+      currentBasePreset && /Prima, Secunda y Tera/i.test(currentBasePreset.name)
+        ? 'block'
+        : 'none';
+  }
   canvasHolder.style.display = 'inline-block';
   toolbar.style.display = 'flex';
   hint.style.display = 'block';
