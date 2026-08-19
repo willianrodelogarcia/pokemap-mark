@@ -1,0 +1,25 @@
+[
+  {
+    "name": "Mapa de Kanto",
+    "url": "https://res.cloudinary.com/dxd3ct4ss/image/upload/v1786505716/doebv1cc7fsont0m3ivl.png",
+    "region": "Kanto"
+  },
+  {
+    "name": "Mapa de Isla Prima, Secunda y Tera",
+    "url": "https://res.cloudinary.com/dxd3ct4ss/image/upload/v1786770369/mapas/rojoFuego/base/v4mqtkfa9gldjmtcbvm3.png",
+    "region": "Islas Sete 1–3",
+    "mapView": "sevii_1_3"
+  },
+  {
+    "name": "Mapa de Isla Quarta, Ombligo e Inta",
+    "url": "https://res.cloudinary.com/dxd3ct4ss/image/upload/v1786770528/mapas/rojoFuego/base/oe751cohrw0qwlrwsm2f.png",
+    "region": "Islas Sete 4–5 + Ombligo",
+    "mapView": "sevii_4_5_navel"
+  },
+  {
+    "name": "Mapa de Isla Séptima, Exta y Origen",
+    "url": "https://res.cloudinary.com/dxd3ct4ss/image/upload/v1786770596/mapas/rojoFuego/base/jfnnuddmvtdumx6xtqv4.png",
+    "region": "Islas Sete 6–7 + Origen",
+    "mapView": "sevii_6_7_birth"
+  }
+]

@@ -1,0 +1,198 @@
+{
+  "canvas": {
+    "width": 960,
+    "height": 640
+  },
+  "views": {
+    "sevii_1_3": {
+      "image": "Mapa_de_las_islas_Prima, Secunda y Tera en Rojo Fuego 960x640.png",
+      "areas": {
+        "Isla Prima": {
+          "x": 157,
+          "y": 381,
+          "width": 32,
+          "height": 32,
+          "status": "image_calibrated"
+        },
+        "Isla Secunda": {
+          "x": 413,
+          "y": 413,
+          "width": 32,
+          "height": 32,
+          "status": "image_calibrated"
+        },
+        "Isla Tera": {
+          "x": 701,
+          "y": 509,
+          "width": 32,
+          "height": 32,
+          "status": "image_calibrated"
+        },
+        "Camino Candente": {
+          "x": 188,
+          "y": 292,
+          "width": 36,
+          "height": 108,
+          "status": "image_calibrated"
+        },
+        "Playa Tesoro": {
+          "x": 160,
+          "y": 452,
+          "width": 32,
+          "height": 28,
+          "status": "image_calibrated"
+        },
+        "Cabo Extremo": {
+          "x": 416,
+          "y": 372,
+          "width": 32,
+          "height": 48,
+          "status": "image_calibrated"
+        },
+        "Puente Unión": {
+          "x": 576,
+          "y": 512,
+          "width": 32,
+          "height": 32,
+          "status": "image_calibrated"
+        },
+        "Puerto Tera": {
+          "x": 640,
+          "y": 512,
+          "width": 128,
+          "height": 64,
+          "status": "image_calibrated"
+        }
+      }
+    },
+    "sevii_4_5_navel": {
+      "image": "Mapa de las islas Quarta, Ombligo y Inta en Rojo Fuego 960x640.png",
+      "areas": {
+        "Isla Quarta": {
+          "x": 227,
+          "y": 247,
+          "width": 32,
+          "height": 32,
+          "status": "image_calibrated"
+        },
+        "Roca Ombligo": {
+          "x": 446,
+          "y": 377,
+          "width": 32,
+          "height": 32,
+          "status": "image_calibrated"
+        },
+        "Isla Inta": {
+          "x": 637,
+          "y": 477,
+          "width": 32,
+          "height": 32,
+          "status": "image_calibrated"
+        },
+        "Laberinto Acuático": {
+          "x": 576,
+          "y": 448,
+          "width": 32,
+          "height": 32,
+          "status": "image_calibrated"
+        },
+        "Resort Magnífico": {
+          "x": 668,
+          "y": 480,
+          "width": 36,
+          "height": 48,
+          "status": "image_calibrated"
+        },
+        "Prado Inta": {
+          "x": 704,
+          "y": 528,
+          "width": 32,
+          "height": 64,
+          "status": "image_calibrated"
+        },
+        "Pilar Conmemorativo": {
+          "x": 704,
+          "y": 576,
+          "width": 32,
+          "height": 64,
+          "status": "image_calibrated"
+        }
+      }
+    },
+    "sevii_6_7_birth": {
+      "image": "Mapa de las islas Séptima, Exta y Origen en Rojo Fuego 960x640.png",
+      "areas": {
+        "Isla Séptima": {
+          "x": 285,
+          "y": 381,
+          "width": 32,
+          "height": 32,
+          "status": "image_calibrated"
+        },
+        "Isla Exta": {
+          "x": 685,
+          "y": 294,
+          "width": 32,
+          "height": 32,
+          "status": "image_calibrated"
+        },
+        "Isla Origen": {
+          "x": 702,
+          "y": 542,
+          "width": 32,
+          "height": 32,
+          "status": "image_calibrated"
+        },
+        "Torre Desafío": {
+          "x": 285,
+          "y": 318,
+          "width": 32,
+          "height": 64,
+          "status": "image_calibrated"
+        },
+        "Entrada Cañón": {
+          "x": 285,
+          "y": 414,
+          "width": 32,
+          "height": 32,
+          "status": "image_calibrated"
+        },
+        "Cañón Sevalt": {
+          "x": 317,
+          "y": 414,
+          "width": 32,
+          "height": 96,
+          "status": "image_calibrated"
+        },
+        "Ruinas Tanoby": {
+          "x": 222,
+          "y": 510,
+          "width": 224,
+          "height": 32,
+          "status": "image_calibrated"
+        },
+        "Camino Verde": {
+          "x": 606,
+          "y": 222,
+          "width": 96,
+          "height": 32,
+          "status": "image_calibrated"
+        },
+        "Camino Acuático": {
+          "x": 702,
+          "y": 222,
+          "width": 32,
+          "height": 160,
+          "status": "image_calibrated"
+        },
+        "Valle Ruinas": {
+          "x": 638,
+          "y": 350,
+          "width": 64,
+          "height": 64,
+          "status": "image_calibrated"
+        }
+      }
+    }
+  }
+}

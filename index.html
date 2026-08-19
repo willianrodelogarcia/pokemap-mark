@@ -239,6 +239,263 @@
     background:var(--red);
     transition:width .15s;
   }
+<style>
+#draw.resizing { cursor: nwse-resize; }
+#draw.move-mode { cursor: grab; }
+
+  .map-register-panel{
+    margin:0 0 16px;
+    padding:14px;
+    background:var(--paper);
+    border:2px solid var(--panel-edge);
+    border-radius:4px;
+  }
+  .map-register-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+    margin-bottom:12px;
+  }
+  .map-register-head h2{
+    margin:0 0 4px;
+    font-size:.9rem;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+  }
+  .map-register-badge{
+    border:1px solid var(--panel-edge);
+    border-radius:3px;
+    padding:4px 7px;
+    font-size:.62rem;
+    color:var(--accent);
+    letter-spacing:.08em;
+  }
+  .map-pokedex{
+    margin-top:12px;
+    border-top:1px solid var(--panel-edge);
+    padding-top:12px;
+  }
+  .map-pokedex-toolbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+    margin-bottom:9px;
+    flex-wrap:wrap;
+  }
+  .map-pokedex-toolbar strong{
+    display:block;
+    font-size:.76rem;
+    margin-bottom:2px;
+  }
+  .map-pokedex-search{
+    flex:1;
+    max-width:320px;
+  }
+  .map-pokedex-search input{
+    width:100%;
+  }
+  .map-pokedex-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(145px,1fr));
+    gap:7px;
+    max-height:310px;
+    overflow:auto;
+    padding:2px;
+  }
+  .map-pokemon-card{
+    position:relative;
+    display:flex;
+    align-items:center;
+    gap:7px;
+    min-height:58px;
+    padding:6px 7px;
+    background:#fff;
+    border:1px solid var(--panel-edge);
+    border-radius:4px;
+    cursor:pointer;
+    user-select:none;
+    transition:transform .1s, border-color .1s, background .1s;
+  }
+  .map-pokemon-card:hover{
+    transform:translateY(-1px);
+    background:#f7f2e9;
+  }
+  .map-pokemon-card.selected{
+    border:2px solid var(--red);
+    background:#f8e5df;
+    padding:5px 6px;
+  }
+  .map-pokemon-card img{
+    width:48px;
+    height:48px;
+    image-rendering:pixelated;
+    object-fit:contain;
+    flex:0 0 48px;
+  }
+  .map-pokemon-card .map-pokemon-id{
+    color:var(--accent);
+    font-size:.62rem;
+  }
+  .map-pokemon-card .map-pokemon-name{
+    font-size:.7rem;
+    font-weight:bold;
+    text-transform:capitalize;
+  }
+  .map-pokemon-check{
+    position:absolute;
+    right:6px;
+    top:5px;
+    font-size:.75rem;
+    color:var(--red);
+  }
+  .map-pokedex-loading,
+  .map-pokedex-empty{
+    grid-column:1/-1;
+    padding:18px;
+    text-align:center;
+    color:var(--accent);
+    font-size:.72rem;
+    border:1px dashed var(--panel-edge);
+    border-radius:3px;
+  }
+  .map-register-actions{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-top:10px;
+  }
+
+  .pokedex-panel{
+    margin:0 0 16px;
+    padding:14px;
+    background:var(--paper);
+    border:2px solid var(--panel-edge);
+    border-radius:4px;
+  }
+  .pokedex-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+    margin-bottom:12px;
+  }
+  .pokedex-head h2{
+    margin:0 0 4px;
+    font-size:.9rem;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+  }
+  .pokedex-badge{
+    border:1px solid var(--panel-edge);
+    border-radius:3px;
+    padding:4px 7px;
+    font-size:.62rem;
+    color:var(--accent);
+    letter-spacing:.08em;
+  }
+  .pokedex-toolbar{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:10px;
+  }
+  .pokedex-toolbar input{
+    flex:1;
+    min-width:0;
+  }
+  .pokedex-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(145px,1fr));
+    gap:8px;
+    max-height:520px;
+    overflow:auto;
+    padding:2px;
+  }
+  .pokedex-card{
+    position:relative;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    min-height:70px;
+    padding:7px;
+    border:1px solid var(--panel-edge);
+    border-radius:4px;
+    background:#fff;
+    cursor:pointer;
+    text-align:left;
+    transition:transform .1s,background .1s,border-color .1s;
+  }
+  .pokedex-card:hover{
+    transform:translateY(-1px);
+    background:#f7f2e9;
+    border-color:var(--accent);
+  }
+  .pokedex-card img{
+    width:58px;
+    height:58px;
+    object-fit:contain;
+    image-rendering:pixelated;
+    flex:0 0 58px;
+  }
+  .pokedex-number{
+    font-size:.62rem;
+    color:var(--accent);
+  }
+  .pokedex-name{
+    font-size:.72rem;
+    font-weight:bold;
+    text-transform:capitalize;
+  }
+  .pokedex-loading,
+  .pokedex-empty{
+    grid-column:1/-1;
+    padding:20px;
+    text-align:center;
+    color:var(--accent);
+    border:1px dashed var(--panel-edge);
+    border-radius:4px;
+    font-size:.72rem;
+  }
+  .pokedex-detail{
+    margin-top:12px;
+    border-top:1px solid var(--panel-edge);
+    padding-top:12px;
+  }
+  .pokedex-detail-card{
+    display:flex;
+    gap:18px;
+    align-items:center;
+    padding:12px;
+    border:1px solid var(--panel-edge);
+    border-radius:4px;
+    background:#fff;
+  }
+  .pokedex-detail-card img{
+    width:120px;
+    height:120px;
+    image-rendering:pixelated;
+    object-fit:contain;
+  }
+  .pokedex-detail-card h3{
+    margin:0 0 4px;
+    text-transform:capitalize;
+  }
+  .pokedex-detail-number{
+    color:var(--accent);
+    font-size:.72rem;
+  }
+  .pokedex-stat-list{
+    margin:8px 0 0;
+    padding:0;
+    list-style:none;
+    font-size:.7rem;
+  }
+  .pokedex-stat-list li{
+    margin:3px 0;
+  }
+</style>
 </style>
 <style>
 #dropzone.loading { opacity: .75; pointer-events: none; }
@@ -309,6 +566,36 @@
       <div id="baseRegionTabs" class="region-tabs"></div>
       <div id="baseImageGallery" style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:14px;"></div>
     </div>
+
+    
+    <section class="pokedex-panel" id="pokedexPanel">
+      <div class="pokedex-head">
+        <div>
+          <h2>Pokédex</h2>
+          <p class="hint">Consulta todos los Pokémon disponibles desde PokéAPI.</p>
+        </div>
+        <span class="pokedex-badge">POKÉDEX</span>
+      </div>
+
+      <div class="pokedex-toolbar">
+        <input
+          type="search"
+          id="pokedexSearch"
+          placeholder="Buscar por nombre o número..."
+          autocomplete="off">
+        <span class="hint" id="pokedexCount">0 Pokémon</span>
+      </div>
+
+      <div class="pokedex-grid" id="pokedexGrid">
+        <div class="pokedex-loading">Cargando Pokédex…</div>
+      </div>
+
+      <div class="pokedex-detail" id="pokedexDetail" hidden>
+        <button type="button" class="secondary" id="pokedexCloseDetail">← Volver</button>
+        <div id="pokedexDetailContent"></div>
+      </div>
+    </section>
+
     <div class="dropzone" id="dropzone">
       <p>Arrastra una imagen aquí o haz clic para elegirla<br><span style="font-size:.7rem;">JPG, PNG o WebP</span></p>
     </div>
@@ -330,6 +617,7 @@
       <button class="mode-btn active" id="modeCircle">Círculo</button>
       <button class="mode-btn" id="modeRect">Rectángulo</button>
       <button class="mode-btn" id="modeMove">✥ Mover</button>
+       <button class="secondary" id="changeShapeBtn" disabled>↔ Cambiar forma</button>
     </div>
     <div class="divider"></div>
     <div class="group">
@@ -338,11 +626,11 @@
     </div>
     <div class="group">
       <label for="size">Grosor</label>
-      <input type="range" id="size" min="2" max="60" value="14">
-      <span id="sizeLabel">14px</span>
+      <input type="range" id="size" min="2" max="60" value="2">
+      <span id="sizeLabel">2px</span>
     </div>
     <div class="group">
-      <label for="fillShape"><input type="checkbox" id="fillShape"> Relleno</label>
+      <label for="fillShape"><input type="checkbox" id="fillShape" checked> Relleno</label>
     </div>
     <div class="divider"></div>
     <div class="group">
@@ -379,10 +667,7 @@
         <select id="csvLocationSelect"></select>
       </div>
     </div>
-    <span class="status" id="jsonCoordsStatus"></span><div id="seviiExampleNote" class="hint" style="margin-top:8px; display:none;">
-  Ejemplo: <strong>Magikarp #129</strong> marcado en <strong>Isla Prima</strong>.
-  Es un marcador de demostración basado en el punto de la isla en el mapa regional.
-</div>
+    <span class="status" id="jsonCoordsStatus"></span><div id="seviiSelectionHint" class="hint" style="margin-top:6px;">Los Pokémon y las ubicaciones solo están disponibles al editar un mapa de las Islas Sete.</div>
 
 
     <h2 style="margin-top:16px;">Coordenadas manuales</h2>
@@ -520,14 +805,6 @@ const dctx = draw.getContext('2d');
 const colorInput = document.getElementById('color');
 const sizeInput = document.getElementById('size');
 const sizeLabel = document.getElementById('sizeLabel');
-
-function updateSizeLabel(){
-  sizeLabel.textContent = `${sizeInput.value}px`;
-}
-
-sizeInput.addEventListener('input', updateSizeLabel);
-sizeInput.addEventListener('change', updateSizeLabel);
-updateSizeLabel();
 const undoBtn = document.getElementById('undoBtn');
 const clearBtn = document.getElementById('clearBtn');
 const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
@@ -575,18 +852,14 @@ const backToMapBtn = document.getElementById('backToMapBtn');
 const changeMapBtn = document.getElementById('changeMapBtn');
 const currentMapLabel = document.getElementById('currentMapLabel');
 
-
-
-
-
-
-
 // Estado del editor: debe existir antes de cualquier callback que pueda cargar un mapa.
-let mode = 'circle';
+let mode = 'rect';
 let strokes = []; // circle/rect manual or habitat {x,y,width,height,geometry,markerType}
 let currentStroke = null;
 let drawing = false;
 let selectedStroke = null;
+let resizeState = null;
+const changeShapeBtn = document.getElementById('changeShapeBtn');
 
 // Cambia el modo de edición y actualiza visualmente los botones.
 // Esta función es necesaria porque los botones solo existían en el HTML;
@@ -605,9 +878,11 @@ function setMode(nextMode){
   // La selección solo tiene sentido mientras estamos en modo Mover.
   if (mode !== 'move'){
     selectedStroke = null;
+    resizeState = null;
     updateDeleteButton();
   }
 
+  updateShapeButton();
   redrawStrokes();
 }
 
@@ -621,6 +896,54 @@ function updateDeleteButton(){
   }
 }
 
+function updateShapeButton(){
+  if (!changeShapeBtn) return;
+  const canChange = !!selectedStroke && (
+    selectedStroke.type === 'rect' ||
+    selectedStroke.type === 'circle'
+  );
+  changeShapeBtn.disabled = !canChange;
+  if (canChange){
+    changeShapeBtn.textContent =
+      selectedStroke.type === 'rect' ? '◯ Convertir a círculo' : '▣ Convertir a rectángulo';
+  } else {
+    changeShapeBtn.textContent = '↔ Cambiar forma';
+  }
+}
+
+function changeSelectedShape(){
+  if (!selectedStroke) return;
+
+  if (selectedStroke.type === 'rect'){
+    const b = getBBox(selectedStroke);
+    const cx = (b.minX + b.maxX) / 2;
+    const cy = (b.minY + b.maxY) / 2;
+    const r = Math.min(b.maxX - b.minX, b.maxY - b.minY) / 2;
+
+    selectedStroke.type = 'circle';
+    selectedStroke.points = [
+      { x: cx, y: cy },
+      { x: cx + r, y: cy }
+    ];
+    selectedStroke.fill = true;
+  } else if (selectedStroke.type === 'circle'){
+    const b = getBBox(selectedStroke);
+    selectedStroke.type = 'rect';
+    selectedStroke.points = [
+      { x: b.minX, y: b.minY },
+      { x: b.maxX, y: b.maxY }
+    ];
+    selectedStroke.fill = true;
+  }
+
+  updateShapeButton();
+  redrawStrokes();
+}
+
+if (changeShapeBtn){
+  changeShapeBtn.addEventListener('click', changeSelectedShape);
+}
+
 function deleteSelectedStroke(){
   if (!selectedStroke) return;
 
@@ -630,7 +953,9 @@ function deleteSelectedStroke(){
   }
 
   selectedStroke = null;
+  resizeState = null;
   updateDeleteButton();
+  updateShapeButton();
   redrawStrokes();
 }
 
@@ -654,6 +979,174 @@ window.addEventListener('keydown', e => {
   }
 });
 
+const pokedexPanel = document.getElementById('pokedexPanel');
+const pokedexSearch = document.getElementById('pokedexSearch');
+const pokedexGrid = document.getElementById('pokedexGrid');
+const pokedexCount = document.getElementById('pokedexCount');
+const pokedexDetail = document.getElementById('pokedexDetail');
+const pokedexDetailContent = document.getElementById('pokedexDetailContent');
+const pokedexCloseDetail = document.getElementById('pokedexCloseDetail');
+
+let pokedexPokemon = [];
+let pokedexLoaded = false;
+
+function normalizePokedexText(value){
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+function pokemonSpriteUrl(id){
+  return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
+}
+
+function renderPokedex(){
+  const query = normalizePokedexText(pokedexSearch.value);
+
+  const filtered = pokedexPokemon.filter(p => {
+    if (!query) return true;
+
+    return (
+      String(p.id).includes(query) ||
+      normalizePokedexText(p.name).includes(query)
+    );
+  });
+
+  pokedexCount.textContent =
+    `${filtered.length} de ${pokedexPokemon.length} Pokémon`;
+
+  if (!filtered.length){
+    pokedexGrid.innerHTML =
+      '<div class="pokedex-empty">No se encontraron Pokémon.</div>';
+    return;
+  }
+
+  pokedexGrid.innerHTML = filtered.map(p => `
+    <button
+      type="button"
+      class="pokedex-card"
+      data-pokedex-id="${p.id}">
+      <img
+        src="${pokemonSpriteUrl(p.id)}"
+        alt="${p.name}"
+        loading="lazy">
+      <span>
+        <span class="pokedex-number">#${String(p.id).padStart(3,'0')}</span><br>
+        <span class="pokedex-name">${p.name}</span>
+      </span>
+    </button>
+  `).join('');
+
+  pokedexGrid.querySelectorAll('.pokedex-card').forEach(card => {
+    card.addEventListener('click', () => {
+      showPokedexDetail(Number(card.dataset.pokedexId));
+    });
+  });
+}
+
+async function loadPokedex(){
+  pokedexGrid.innerHTML =
+    '<div class="pokedex-loading">Cargando Pokémon desde PokéAPI…</div>';
+
+  try{
+    /*
+     * limit=2000 evita limitar la Pokédex a los 386 Pokémon de FireRed.
+     * PokéAPI devolverá los Pokémon disponibles en su listado actual.
+     */
+    const response = await fetch(
+      'https://pokeapi.co/api/v2/pokemon?limit=2000&offset=0'
+    );
+
+    if (!response.ok){
+      throw new Error(`PokéAPI respondió ${response.status}`);
+    }
+
+    const result = await response.json();
+
+    pokedexPokemon = (result.results || [])
+      .map((pokemon, index) => ({
+        id: index + 1,
+        name: pokemon.name,
+        url: pokemon.url
+      }))
+      .filter(p => p.id <= result.count);
+
+    pokedexLoaded = true;
+    renderPokedex();
+
+  } catch(error){
+    console.error('[Pokédex]', error);
+
+    pokedexGrid.innerHTML =
+      '<div class="pokedex-empty">No se pudo cargar la Pokédex desde PokéAPI.</div>';
+    pokedexCount.textContent = 'Error al cargar';
+  }
+}
+
+async function showPokedexDetail(id){
+  const pokemon = pokedexPokemon.find(p => p.id === id);
+  if (!pokemon) return;
+
+  pokedexGrid.hidden = true;
+  document.querySelector('.pokedex-toolbar').hidden = true;
+  pokedexDetail.hidden = false;
+
+  pokedexDetailContent.innerHTML =
+    '<div class="pokedex-loading">Cargando información…</div>';
+
+  try{
+    const response = await fetch(
+      `https://pokeapi.co/api/v2/pokemon/${id}`
+    );
+
+    if (!response.ok){
+      throw new Error(`PokéAPI respondió ${response.status}`);
+    }
+
+    const detail = await response.json();
+
+    const types = detail.types
+      .map(t => t.type.name)
+      .join(', ');
+
+    pokedexDetailContent.innerHTML = `
+      <div class="pokedex-detail-card">
+        <img
+          src="${detail.sprites?.front_default || pokemonSpriteUrl(id)}"
+          alt="${detail.name}">
+        <div>
+          <div class="pokedex-detail-number">
+            #${String(detail.id).padStart(3,'0')}
+          </div>
+          <h3>${detail.name}</h3>
+          <ul class="pokedex-stat-list">
+            <li><strong>Tipo:</strong> ${types}</li>
+            <li><strong>Altura:</strong> ${detail.height / 10} m</li>
+            <li><strong>Peso:</strong> ${detail.weight / 10} kg</li>
+          </ul>
+        </div>
+      </div>
+    `;
+
+  } catch(error){
+    console.error('[Pokédex detalle]', error);
+
+    pokedexDetailContent.innerHTML =
+      '<div class="pokedex-empty">No se pudo cargar el detalle del Pokémon.</div>';
+  }
+}
+
+pokedexSearch.addEventListener('input', renderPokedex);
+
+pokedexCloseDetail.addEventListener('click', () => {
+  pokedexDetail.hidden = true;
+  pokedexGrid.hidden = false;
+  document.querySelector('.pokedex-toolbar').hidden = false;
+});
+
+loadPokedex();
 
 
 // Base map images already uploaded to Cloudinary, ready to reuse without
@@ -668,8 +1161,8 @@ function getPresetRegion(preset){
   const n = String(preset.name || '').toLowerCase();
   if (n.includes('kanto')) return 'Kanto';
   if (n.includes('prima')) return 'Islas Sete 1–3';
-  if (n.includes('quarta')) return 'Islas Sete 4–6';
-  if (n.includes('setima')) return 'Islas Sete 7+';
+  if (n.includes('quarta')) return 'Islas Sete 4–5 + Ombligo';
+  if (n.includes('setima') || n.includes('séptima')) return 'Islas Sete 6–7 + Origen';
   return 'Islas Sete';
 }
 
@@ -724,10 +1217,16 @@ function renderBaseImageGallery(){
 
     card.append(thumbnail, label, region);
     card.onclick = () => {
-      currentBasePreset = preset;
+      currentBasePreset = {
+        ...preset,
+        region: preset.region || getPresetRegion(preset)
+      };
       currentMapLabel.textContent = 'Mapa actual: ' + preset.name;
-      console.info('[Mapa] Seleccionando mapa guardado:', preset);
-      loadImageFromUrl(preset.url, preset);
+      console.info('[Mapa] Seleccionando mapa guardado:', currentBasePreset);
+      if (coordRecords.length){
+        populateCoordSelects();
+      }
+      loadImageFromUrl(preset.url, currentBasePreset);
     };
     baseImageGallery.appendChild(card);
   });
@@ -743,25 +1242,45 @@ function showMapSelector(){
   coordsPanel.style.display = 'none';
   editorNav.style.display = 'none';
   baseImageGallerySection.style.display = 'block';
+  pokedexPanel.style.display = 'block';
   renderBaseImageGallery();
 }
 
 // Load the list from mapas-base.json. If it can't be reached (e.g. opening the
 // HTML directly from disk without a server), the gallery just stays empty and
 // the person can still upload an image from their computer as usual.
-fetch('./mapas-base.json')
-  .then(res => { if (!res.ok) throw new Error('mapas-base.json no encontrado'); return res.json(); })
+loadSeviiGeometry();
+fetch('./mapas-base_mejorado_calibrado.json')
+  .then(res => {
+    if (!res.ok) throw new Error('mapas-base_mejorado.json no encontrado');
+    return res.json();
+  })
+  .catch(() => fetch('./mapas-base_mejorado_orden_final.json').then(res => {
+    if (!res.ok) throw new Error('No se encontró ningún catálogo de mapas');
+    return res.json();
+  }))
   .then(list => {
     if (Array.isArray(list)){
-      presetBaseImages = list.filter(item => item && item.url);
+      presetBaseImages = list
+        .filter(item => item && item.url)
+        .map(item => ({
+          ...item,
+          region: item.region || getPresetRegion(item)
+        }));
       renderBaseImageGallery();
+      if (coordRecords.length) populateCoordSelects();
     }
   })
-  .catch(() => { /* keep gallery empty, no error shown to the user */ });
+  .catch(() => { /* la galería puede seguir vacía si no hay catálogo */ });
 
 function loadImageFromUrl(url, preset = null){
   const originalUrl = String(url || '').trim();
-  if (preset) currentBasePreset = preset;
+  if (preset){
+    currentBasePreset = {
+      ...preset,
+      region: preset.region || getPresetRegion(preset)
+    };
+  }
 
   if (!originalUrl){
     showBaseImageError('La imagen guardada no tiene una URL válida.');
@@ -979,12 +1498,112 @@ const csvPokemonSelect = document.getElementById('csvPokemonSelect');
 const csvLocationSelect = document.getElementById('csvLocationSelect');
 const jsonCoordsStatus = document.getElementById('jsonCoordsStatus');
 
-let coordRecords = []; // JSON records in the supplied 960x640 map space
+let coordRecords = [];
+const geometryByLocation = {};
+let seviiGeometryLoaded = false; // JSON records in the supplied 960x640 map space
 // Region-map areas use section CENTER coordinates; special habitat anchors
 // retain their source marker coordinates.
 
+
+
+async function loadSeviiGeometry(){
+  try{
+    const res = await fetch('./sevii_map_calibration_960x640.json?v=2');
+    if (!res.ok) throw new Error('No se encontró sevii_map_calibration_960x640.json');
+    const payload = await res.json();
+    Object.keys(geometryByLocation).forEach(k => delete geometryByLocation[k]);
+
+    for (const [view, config] of Object.entries(payload.views || {})){
+      for (const [location, geometry] of Object.entries(config.areas || {})){
+        geometryByLocation[`${view}::${location}`] = {
+          ...geometry,
+          location,
+          mapView: view
+        };
+      }
+    }
+
+    seviiGeometryLoaded = true;
+    if (coordRecords.length) populateCoordSelects();
+  }catch(err){
+    console.error('[Islas Sete] No se pudo cargar calibración de imágenes:', err);
+  }
+}
+
+function getRecordGeometry(record){
+  const view = record.mapView || getActiveSeviiMapView();
+  return geometryByLocation[`${view}::${record.location}`] || null;
+}
+
+function getActiveSeviiGroups(){
+  if (!currentBasePreset) return [];
+  const region = getPresetRegion(currentBasePreset);
+
+  if (region === 'Islas Sete 1–3') return ['one_island','two_island','three_island'];
+  if (region === 'Islas Sete 4–5 + Ombligo') return ['four_island','five_island','navel_rock'];
+  if (region === 'Islas Sete 6–7 + Origen') return ['six_island','seven_island','birth_island'];
+
+  return [];
+}
+
+function getActiveSeviiMapView(){
+  if (!currentBasePreset) return null;
+  const region = getPresetRegion(currentBasePreset);
+
+  if (region === 'Islas Sete 1–3') return 'sevii_1_3';
+  if (region === 'Islas Sete 4–5 + Ombligo') return 'sevii_4_5_navel';
+  if (region === 'Islas Sete 6–7 + Origen') return 'sevii_6_7_birth';
+
+  return null;
+}
+
+function isSeviiMapActive(){
+  return getActiveSeviiGroups().length > 0;
+}
+
+function setSeviiSelectorsEnabled(enabled){
+  [csvVersionSelect, csvPokemonSelect, csvLocationSelect].forEach(el => {
+    el.disabled = !enabled;
+  });
+
+  const hint = document.getElementById('seviiSelectionHint');
+  if (hint){
+    hint.style.display = enabled ? 'none' : 'block';
+  }
+}
+
+// On Kanto maps we use ALL Kanto records.
+// On a Sevii map we restrict the selectors to the islands represented
+// by the currently selected base map.
+function getRecordsForCurrentMap(){
+  const mapView = getActiveSeviiMapView();
+
+  if (mapView){
+    return coordRecords.filter(r => r.mapView === mapView);
+  }
+
+  // Kanto = original records without an island/mapView.
+  return coordRecords.filter(r => r.island == null);
+}
+
+function clearSelectorsForNoData(){
+  csvVersionSelect.innerHTML = '<option value="">No hay datos disponibles</option>';
+  csvPokemonSelect.innerHTML = '<option value="">—</option>';
+  csvLocationSelect.innerHTML = '<option value="">—</option>';
+  csvLocationSelect.dataset.records = '[]';
+}
+
 function populateCoordSelects(){
-  const versions = [...new Set(coordRecords.map(r => r.version))].sort();
+  const records = getRecordsForCurrentMap();
+
+  setSeviiSelectorsEnabled(records.length > 0);
+
+  if (!records.length){
+    clearSelectorsForNoData();
+    return;
+  }
+
+  const versions = [...new Set(records.map(r => r.version))].sort();
 
   csvVersionSelect.innerHTML = versions.map(v =>
     `<option value="${v}">${v}</option>`
@@ -994,10 +1613,11 @@ function populateCoordSelects(){
 }
 
 function populatePokemonSelect(){
+  const records = getRecordsForCurrentMap();
   const version = csvVersionSelect.value;
   const seen = new Map();
 
-  coordRecords
+  records
     .filter(r => r.version === version)
     .forEach(r => {
       if (!seen.has(r.pokemonId)) seen.set(r.pokemonId, r.pokemon);
@@ -1005,44 +1625,96 @@ function populatePokemonSelect(){
 
   const entries = [...seen.entries()].sort((a,b) => a[0] - b[0]);
 
-  csvPokemonSelect.innerHTML = entries.map(([id, name]) =>
-    `<option value="${id}">#${String(id).padStart(3, '0')} ${name}</option>`
-  ).join('');
+  csvPokemonSelect.innerHTML = entries.length
+    ? entries.map(([id, name]) =>
+        `<option value="${id}">#${String(id).padStart(3, '0')} ${name}</option>`
+      ).join('')
+    : '<option value="">No hay Pokémon para esta versión</option>';
 
   populateLocationSelect();
 }
 
 function populateLocationSelect(){
+  const records = getRecordsForCurrentMap();
   const version = csvVersionSelect.value;
   const pokemonId = Number(csvPokemonSelect.value);
 
-  const locs = coordRecords.filter(
-    r => r.version === version && r.pokemonId === pokemonId
-  );
+  const locs = records
+    .filter(r => r.version === version && r.pokemonId === pokemonId)
+    .sort((a,b) =>
+      String(a.island || '').localeCompare(String(b.island || '')) ||
+      String(a.location).localeCompare(String(b.location))
+    );
 
-  csvLocationSelect.innerHTML = locs.map((r, i) =>
-    `<option value="${i}">
-      ${r.location} · ${r.geometry} · ${r.width}×${r.height}
-    </option>`
-  ).join('');
+  if (!locs.length){
+    csvLocationSelect.innerHTML =
+      '<option value="">No hay ubicaciones para este Pokémon</option>';
+    csvLocationSelect.dataset.records = '[]';
+    return;
+  }
 
-  csvLocationSelect.dataset.records = JSON.stringify(locs);
-  fillFromSelectedLocation();
+  // Do not silently choose a location from another island in a composite map.
+  // The user must explicitly choose the exact location.
+  csvLocationSelect.innerHTML =
+    '<option value="">Selecciona una ubicación</option>' +
+    locs.map((r, i) =>
+      `<option value="${i}">
+        ${r.island ? `${r.island.replace('_island','')} · ` : ''}` +
+        `${r.location} · ${r.geometry} · ${r.width}×${r.height}` +
+        `${isSeviiMapActive() && r.coordinateStatus === 'parent_island_anchor'
+          ? ' · área manual' : ''}` +
+      `</option>`
+    ).join('');
+
+  const enrichedLocs = locs.map(r => {
+    const g = getRecordGeometry(r);
+    return g ? {
+      ...r,
+      geometryStatus: g.status,
+      exactGeometry: g
+    } : r;
+  });
+
+  csvLocationSelect.dataset.records = JSON.stringify(enrichedLocs);
+
+  // Clear the coordinate fields until the exact location is selected.
+  coordX.value = '';
+  coordY.value = '';
+  coordPokemonId.value = '';
+  jsonCoordsStatus.textContent =
+    `${locs.length} ubicación(es) disponibles para este Pokémon en el mapa actual. ` +
+    `Selecciona una ubicación concreta.`;
+  jsonCoordsStatus.className = 'status';
 }
 
 function fillFromSelectedLocation(){
   const locs = JSON.parse(csvLocationSelect.dataset.records || '[]');
-  const record = locs[Number(csvLocationSelect.value)];
 
+  if (csvLocationSelect.value === ''){
+    coordX.value = '';
+    coordY.value = '';
+    coordPokemonId.value = '';
+    return;
+  }
+
+  const record = locs[Number(csvLocationSelect.value)];
   if (!record) return;
 
-  coordX.value = record.x;
-  coordY.value = record.y;
+  const master = getRecordGeometry(record);
+  const exact = master?.canvas960;
+
+  coordX.value = exact ? Math.round(exact.left + exact.width / 2) : (record.x ?? '');
+  coordY.value = exact ? Math.round(exact.top + exact.height / 2) : (record.y ?? '');
   coordPokemonId.value = record.pokemonId;
 
+  const geomMaster = getRecordGeometry(record);
+  const exactStatus = geomMaster?.canvas960;
+
   jsonCoordsStatus.textContent =
-    `${record.location}: ${record.geometry}, ` +
-    `${record.width}×${record.height}px · centro (${record.x}, ${record.y})`;
+    `${record.island ? record.island.replace('_island','') + ' · ' : ''}` +
+    `${record.location}: ` +
+    `${exactStatus ? `${exactStatus.width}×${exactStatus.height}px · centro (${Math.round(exactStatus.left + exactStatus.width/2)}, ${Math.round(exactStatus.top + exactStatus.height/2)}` : 'geometría manual requerida'}` +
+    `${exactStatus ? ')' : ''}`;
 
   jsonCoordsStatus.className = 'status ok';
 }
@@ -1051,8 +1723,9 @@ csvVersionSelect.addEventListener('change', populatePokemonSelect);
 csvPokemonSelect.addEventListener('change', populateLocationSelect);
 csvLocationSelect.addEventListener('change', fillFromSelectedLocation);
 
+
 // The definitive habitat data is stored as JSON next to index.html.
-fetch('./rojo_fuego_verde_hoja_final_960x640_corregido.json')
+fetch('./rojo_fuego_verde_hoja_habitat_islas_calibrado_por_imagen.json?v=19')
   .then(res => {
     if (!res.ok) throw new Error('JSON de hábitat no encontrado');
     return res.json();
@@ -1092,63 +1765,124 @@ function getSelectedCoordRecord(){
   return locs[Number(csvLocationSelect.value)] || null;
 }
 
+
+// Custom geometry for the user's 1–3 composite image (900×600).
+// These are deliberately kept separate from the game's Region Map cursor
+// coordinates: the composite artwork has its own visual coordinate system.
+const CUSTOM_SEVII_1_3_AREAS = {
+  "Isla Prima":     {x: 666, y: 343, width: 72, height: 108},
+  "Isla Secunda":   {x: 285, y: 315, width: 30, height: 30},
+  "Isla Tera":      {x: 296, y: 412, width: 96, height: 156},
+  "Monte Ascuas":   {x: 593, y: 161, width: 30, height: 44},
+  "Camino Candente":{x: 680, y: 232, width: 48, height: 52},
+  // Treasure Beach is the southern shore/landing attached to One Island.
+  "Playa Tesoro":   {x: 652, y: 386, width: 48, height: 24},
+  // Cape Brink is the northern/small land section connected to Two Island.
+  "Cabo Extremo":   {x: 285, y: 315, width: 30, height: 30},
+  // Bond Bridge is the horizontal blue/green connector west of Three Island.
+  "Puente Unión":   {x: 210, y: 486, width: 200, height: 28},
+  "Puerto Tera":    {x: 390, y: 485, width: 32, height: 32},
+  // Berry Forest occupies the forested Three Island child-islet/upper section.
+  "Bosque Baya":    {x: 248, y: 334, width: 96, height: 110}
+};
+
+function getCustomSeviiArea(record){
+  if (!record) return null;
+  if (record.island !== 'one_island' &&
+      record.island !== 'two_island' &&
+      record.island !== 'three_island') return null;
+
+  const a = CUSTOM_SEVII_1_3_AREAS[record.location];
+  if (!a) return null;
+  return a;
+}
+
 function createHabitatStroke(record){
-  // The JSON stores the area in the ORIGINAL 960x640 map coordinate system.
-  // Use left/top as the source of truth for region-map areas. This avoids
-  // accidentally treating x/y as a top-left coordinate or as a marker anchor.
   const scaleX = base.width / 960;
   const scaleY = base.height / 640;
 
-  const width = Number(record.width);
-  const height = Number(record.height);
-
-  if (!Number.isFinite(width) || !Number.isFinite(height)){
-    throw new Error(`Área inválida para ${record.location}: width/height no son numéricos.`);
-  }
-
-  // Normal region-map records store the rectangle as left/top.
-  // Sevii island anchor records store x/y as the CENTER of the marker.
-  let centerX;
-  let centerY;
-
-  if (
-    record.geometry === 'sevii_island_anchor' ||
-    record.markerType === 'island'
-  ){
-    centerX = Number(record.x);
-    centerY = Number(record.y);
-  } else {
-    const left = Number(record.left);
-    const top = Number(record.top);
-
-    if (!Number.isFinite(left) || !Number.isFinite(top)){
-      throw new Error(`Área inválida para ${record.location}: faltan left/top.`);
-    }
-
-    centerX = left + width / 2;
-    centerY = top + height / 2;
-  }
-
-  if (!Number.isFinite(centerX) || !Number.isFinite(centerY)){
-    throw new Error(`Coordenadas inválidas para ${record.location}.`);
-  }
-
-  return {
+  /*
+   * Todas las marcas de hábitat, incluidas las de Islas Sete,
+   * utilizan exactamente el mismo objeto visual.
+   *
+   * La única diferencia es cómo obtenemos la geometría:
+   *   - Islas Sete: geometría calibrada para la imagen actual.
+   *   - Kanto: left/top/width/height del JSON.
+   *   - Fallback 1–3 antiguo: geometría personalizada.
+   */
+  const buildHabitatStroke = (geometry, geometryName = 'habitat_area') => ({
     type: 'habitat',
-    geometry: record.geometry,
-    markerType: record.markerType,
+    geometry: geometryName,
+    markerType: 'area',
     pokemonId: record.pokemonId,
     pokemonName: record.pokemon,
     location: record.location,
     island: record.island,
-    x: centerX * scaleX,
-    y: centerY * scaleY,
-    width: width * scaleX,
-    height: height * scaleY,
+    x: (geometry.x + geometry.width / 2) * scaleX,
+    y: (geometry.y + geometry.height / 2) * scaleY,
+    width: geometry.width * scaleX,
+    height: geometry.height * scaleY,
     color: colorInput.value,
     opacity: 0.42,
     size: 2
-  };
+  });
+
+  const isSeviiRecord =
+    String(record.coordinateSystem || '').startsWith('sevii_') ||
+    String(record.geometry || '').startsWith('sevii_') ||
+    record.markerType === 'island' ||
+    !!record.mapView;
+
+  /*
+   * IMPORTANTE:
+   * La geometría calibrada tiene prioridad sobre CUSTOM_SEVII_1_3_AREAS.
+   * Antes ocurría al revés y las ubicaciones 1–3 podían terminar usando
+   * coordenadas antiguas de la imagen 900×600.
+   */
+  if (isSeviiRecord){
+    const master = getRecordGeometry(record);
+
+    if (master && master.status === 'image_calibrated'){
+      return buildHabitatStroke(master, 'sevii_image_area');
+    }
+
+    // Si no existe calibración para esa ubicación, no inventamos
+    // una coordenada. Solo mantenemos el fallback histórico de 1–3.
+    const custom = getCustomSeviiArea(record);
+    if (custom){
+      const kx = 960 / 900;
+      const ky = 640 / 600;
+
+      return buildHabitatStroke({
+        x: custom.x * kx,
+        y: custom.y * ky,
+        width: custom.width * kx,
+        height: custom.height * ky
+      }, 'sevii_custom_area');
+    }
+
+    throw new Error(
+      `La ubicación "${record.location}" no tiene geometría calibrada ` +
+      `para el mapa de Islas Sete seleccionado.`
+    );
+  }
+
+  const width = Number(record.width);
+  const height = Number(record.height);
+  const left = Number(record.left);
+  const top = Number(record.top);
+
+  if (![width, height, left, top].every(Number.isFinite)){
+    throw new Error(
+      `Área inválida para ${record.location}: ` +
+      `se requieren left/top/width/height numéricos.`
+    );
+  }
+
+  return buildHabitatStroke(
+    { x: left, y: top, width, height },
+    record.geometry || 'habitat_area'
+  );
 }
 
 placeCoordBtn.onclick = async () => {
@@ -1167,8 +1901,6 @@ placeCoordBtn.onclick = async () => {
   const selectedRecord = getSelectedCoordRecord();
 
   if (selectedRecord){
-    // IMPORTANT: use the complete area from JSON.
-    // left/top/width/height are the authoritative region-map geometry.
     strokes.push(createHabitatStroke(selectedRecord));
     redrawStrokes();
 
@@ -1176,7 +1908,7 @@ placeCoordBtn.onclick = async () => {
       `${selectedRecord.location} marcada: ` +
       `${selectedRecord.geometry}, ` +
       `${selectedRecord.width}×${selectedRecord.height}px ` +
-      `en (${selectedRecord.x}, ${selectedRecord.y}) ` +
+      `centrada en (${selectedRecord.x}, ${selectedRecord.y}) ` +
       `del mapa 960×640.`;
 
     coordsStatus.className = 'status ok';
@@ -1251,15 +1983,9 @@ function setupCanvas(image){
   redrawStrokes();
   dropzone.style.display = 'none';
   baseImageGallerySection.style.display = 'none';
+  pokedexPanel.style.display = 'none';
   editorNav.style.display = 'flex';
   currentMapLabel.textContent = 'Mapa actual: ' + (currentBasePreset?.name || 'Imagen cargada');
-  const seviiExampleNote = document.getElementById('seviiExampleNote');
-  if (seviiExampleNote){
-    seviiExampleNote.style.display =
-      currentBasePreset && /Prima, Secunda y Tera/i.test(currentBasePreset.name)
-        ? 'block'
-        : 'none';
-  }
   canvasHolder.style.display = 'inline-block';
   toolbar.style.display = 'flex';
   hint.style.display = 'block';
@@ -1366,6 +2092,27 @@ function findStrokeAt(pos){
   return null;
 }
 
+function getResizeHandles(s){
+  const b = getBBox(s);
+  return [
+    { id:'nw', x:b.minX, y:b.minY },
+    { id:'ne', x:b.maxX, y:b.minY },
+    { id:'se', x:b.maxX, y:b.maxY },
+    { id:'sw', x:b.minX, y:b.maxY }
+  ];
+}
+
+function findResizeHandle(pos, s){
+  if (!s || (s.type !== 'rect' && s.type !== 'circle' && s.type !== 'habitat')) return null;
+  const tolerance = 12;
+  for (const h of getResizeHandles(s)){
+    if (Math.abs(pos.x - h.x) <= tolerance && Math.abs(pos.y - h.y) <= tolerance){
+      return h;
+    }
+  }
+  return null;
+}
+
 function drawSelectionOutline(s){
   const b = getBBox(s);
   dctx.save();
@@ -1373,6 +2120,18 @@ function drawSelectionOutline(s){
   dctx.lineWidth = 1.5;
   dctx.strokeStyle = '#2b2420';
   dctx.strokeRect(b.minX, b.minY, b.maxX - b.minX, b.maxY - b.minY);
+  dctx.setLineDash([]);
+
+  // Four resize handles.
+  for (const h of getResizeHandles(s)){
+    dctx.fillStyle = '#ffffff';
+    dctx.strokeStyle = '#2b2420';
+    dctx.lineWidth = 1.5;
+    dctx.beginPath();
+    dctx.arc(h.x, h.y, 5, 0, Math.PI * 2);
+    dctx.fill();
+    dctx.stroke();
+  }
   dctx.restore();
 }
 
@@ -1381,9 +2140,35 @@ function startDraw(e){
   const pos = getPos(e);
 
   if (mode === 'move'){
+    // Resize has priority over moving when the pointer is on a handle.
+    const resizeHandle = selectedStroke ? findResizeHandle(pos, selectedStroke) : null;
+
+    if (resizeHandle){
+      drawing = true;
+      resizeState = {
+        handle: resizeHandle.id,
+        original: selectedStroke.type === 'habitat'
+          ? {
+              x: selectedStroke.x,
+              y: selectedStroke.y,
+              width: selectedStroke.width,
+              height: selectedStroke.height
+            }
+          : {
+              points: selectedStroke.points.map(p => ({ x:p.x, y:p.y }))
+            }
+      };
+      dragOffset = pos;
+      draw.classList.add('resizing');
+      return;
+    }
+
     const hit = findStrokeAt(pos);
     selectedStroke = hit;
+    resizeState = null;
     updateDeleteButton();
+    updateShapeButton();
+
     if (hit){
       drawing = true;
       draw.classList.add('dragging');
@@ -1392,6 +2177,7 @@ function startDraw(e){
         ? { x: hit.x, y: hit.y }
         : hit.points.map(p => ({ x: p.x, y: p.y }));
     }
+
     redrawStrokes();
     return;
   }
@@ -1406,6 +2192,75 @@ function startDraw(e){
   };
 }
 
+function resizeSelectedStroke(pos){
+  if (!selectedStroke || !resizeState) return;
+
+  const handle = resizeState.handle;
+
+  if (selectedStroke.type === 'habitat'){
+    const o = resizeState.original;
+    const left = o.x - o.width / 2;
+    const right = o.x + o.width / 2;
+    const top = o.y - o.height / 2;
+    const bottom = o.y + o.height / 2;
+
+    let newLeft = left;
+    let newRight = right;
+    let newTop = top;
+    let newBottom = bottom;
+
+    if (handle.includes('w')) newLeft = Math.min(pos.x, right - 4);
+    if (handle.includes('e')) newRight = Math.max(pos.x, left + 4);
+    if (handle.includes('n')) newTop = Math.min(pos.y, bottom - 4);
+    if (handle.includes('s')) newBottom = Math.max(pos.y, top + 4);
+
+    selectedStroke.x = (newLeft + newRight) / 2;
+    selectedStroke.y = (newTop + newBottom) / 2;
+    selectedStroke.width = newRight - newLeft;
+    selectedStroke.height = newBottom - newTop;
+    return;
+  }
+
+  if (selectedStroke.type === 'rect'){
+    const o = resizeState.original.points;
+    const left = Math.min(o[0].x, o[1].x);
+    const right = Math.max(o[0].x, o[1].x);
+    const top = Math.min(o[0].y, o[1].y);
+    const bottom = Math.max(o[0].y, o[1].y);
+
+    let x = pos.x;
+    let y = pos.y;
+
+    const opposite = {
+      nw:{x:right,y:bottom},
+      ne:{x:left,y:bottom},
+      se:{x:left,y:top},
+      sw:{x:right,y:top}
+    }[handle];
+
+    x = handle.includes('w') ? Math.min(x, opposite.x - 4)
+      : handle.includes('e') ? Math.max(x, opposite.x + 4) : opposite.x;
+    y = handle.includes('n') ? Math.min(y, opposite.y - 4)
+      : handle.includes('s') ? Math.max(y, opposite.y + 4) : opposite.y;
+
+    selectedStroke.points = [
+      { x: opposite.x, y: opposite.y },
+      { x, y }
+    ];
+    return;
+  }
+
+  if (selectedStroke.type === 'circle'){
+    const center = resizeState.original.points[0];
+    const radius = Math.max(4, Math.hypot(pos.x - center.x, pos.y - center.y));
+
+    selectedStroke.points = [
+      { x:center.x, y:center.y },
+      { x:center.x + radius, y:center.y }
+    ];
+  }
+}
+
 function moveDraw(e){
   if (!drawing) return;
   e.preventDefault();
@@ -1413,8 +2268,16 @@ function moveDraw(e){
 
   if (mode === 'move'){
     if (!selectedStroke) return;
+
+    if (resizeState){
+      resizeSelectedStroke(pos);
+      redrawStrokes();
+      return;
+    }
+
     const dx = pos.x - dragOffset.x;
     const dy = pos.y - dragOffset.y;
+
     if (selectedStroke.type === 'habitat'){
       selectedStroke.x = dragInitialPoints.x + dx;
       selectedStroke.y = dragInitialPoints.y + dy;
@@ -1440,9 +2303,10 @@ function endDraw(e){
   drawing = false;
 
   if (mode === 'move'){
-    draw.classList.remove('dragging');
+    draw.classList.remove('dragging', 'resizing');
     dragOffset = null;
     dragInitialPoints = null;
+    resizeState = null;
     return;
   }
 
@@ -1533,16 +2397,31 @@ function drawStroke(ctx, s){
   } else if (s.type === 'circle'){
     const [p0, p1] = s.points;
     const r = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+
     ctx.beginPath();
-    ctx.arc(p0.x, p0.y, r, 0, Math.PI*2);
-    if (s.fill) ctx.fill(); else ctx.stroke();
+    ctx.arc(p0.x, p0.y, r, 0, Math.PI * 2);
+    ctx.closePath();
+
+    if (s.fill){
+      // Same visual treatment as the manual rounded rectangle
+      // and JSON habitat markers.
+      ctx.save();
+      ctx.globalAlpha = 0.42;
+      ctx.fill();
+      ctx.globalAlpha = 0.67;
+      ctx.stroke();
+      ctx.restore();
+    } else {
+      ctx.stroke();
+    }
   } else if (s.type === 'rect'){
     const [p0, p1] = s.points;
     const x = Math.min(p0.x, p1.x);
     const y = Math.min(p0.y, p1.y);
     const w = Math.abs(p1.x - p0.x);
     const h = Math.abs(p1.y - p0.y);
-    const radius = Math.min(16, w / 2, h / 2);
+    const radius = Math.min(10, w / 4, h / 4);
+
     ctx.beginPath();
     ctx.moveTo(x + radius, y);
     ctx.arcTo(x + w, y, x + w, y + h, radius);
@@ -1550,7 +2429,18 @@ function drawStroke(ctx, s){
     ctx.arcTo(x, y + h, x, y, radius);
     ctx.arcTo(x, y, x + w, y, radius);
     ctx.closePath();
-    if (s.fill) ctx.fill(); else ctx.stroke();
+
+    if (s.fill){
+      // Same visual treatment as a JSON habitat marker.
+      ctx.save();
+      ctx.globalAlpha = 0.42;
+      ctx.fill();
+      ctx.globalAlpha = 0.67;
+      ctx.stroke();
+      ctx.restore();
+    } else {
+      ctx.stroke();
+    }
   }
 }
 
