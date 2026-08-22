@@ -678,17 +678,32 @@
     <p class="hint" style="margin-top:-4px;">Elige Pokémon y ubicación para cargar el área completa desde el JSON. Pulsa «Colocar marca aquí» para agregar la ubicación. El Nº Pokédex y el nombre del mapa se completan automáticamente; si marcas varias ubicaciones, se concatenan con coma.</p>
     <div class="field-row">
       <div class="field">
-        <label for="csvVersionSelect">Versión</label>
+        <label for="csvVersionSelect">Versión para ubicación</label>
         <select id="csvVersionSelect"></select>
-      </div>
-      <div class="field" style="flex:1.4;">
-        <label for="csvPokemonSelect">Pokémon</label>
-        <select id="csvPokemonSelect"></select>
       </div>
       <div class="field" style="flex:1.4;">
         <label for="csvLocationSelect">Ubicación</label>
         <select id="csvLocationSelect"></select>
       </div>
+    </div>
+
+    <div class="pokemon-version-sections" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-top:12px;">
+      <div class="pokedex-islands" style="margin:0;">
+        <h3 style="margin:0 0 5px;">Pokémon en ambas versiones</h3>
+        <p class="hint" style="margin-top:0;">Pokémon que aparecen tanto en FireRed como en LeafGreen.</p>
+        <select id="csvPokemonBothSelect" style="width:100%;"></select>
+      </div>
+
+      <div class="pokedex-islands" style="margin:0;">
+        <h3 style="margin:0 0 5px;">Pokémon exclusivos por versión</h3>
+        <p class="hint" style="margin-top:0;">Solo se muestran los Pokémon que pertenecen exclusivamente a una versión.</p>
+        <select id="csvPokemonExclusiveSelect" style="width:100%;"></select>
+      </div>
+    </div>
+
+    <div style="margin-top:10px;">
+      <label for="csvPokemonSelect">Pokémon seleccionado</label>
+      <select id="csvPokemonSelect" style="width:100%;"></select>
     </div>
     <span class="status" id="jsonCoordsStatus"></span><div id="seviiSelectionHint" class="hint" style="margin-top:6px;">Los Pokémon y las ubicaciones solo están disponibles al editar un mapa de las Islas Sete.</div>
 
@@ -1667,6 +1682,8 @@ const SEVII_MARKERS = {
 // --- Known habitat areas from JSON (FireRed + LeafGreen) ---
 const csvVersionSelect = document.getElementById('csvVersionSelect');
 const csvPokemonSelect = document.getElementById('csvPokemonSelect');
+const csvPokemonBothSelect = document.getElementById('csvPokemonBothSelect');
+const csvPokemonExclusiveSelect = document.getElementById('csvPokemonExclusiveSelect');
 const csvLocationSelect = document.getElementById('csvLocationSelect');
 const jsonCoordsStatus = document.getElementById('jsonCoordsStatus');
 
@@ -1784,14 +1801,16 @@ function populateCoordSelects(){
   populatePokemonSelect();
 }
 
-function clearMarksOnPokemonChange(){
+function clearMarksOnPokemonChange(force = false){
   const newPokemonId = csvPokemonSelect.value;
 
   if (
-    window._lastHabitatPokemonId !== undefined &&
-    window._lastHabitatPokemonId !== null &&
-    newPokemonId &&
-    String(window._lastHabitatPokemonId) !== String(newPokemonId)
+    (force || (
+      window._lastHabitatPokemonId !== undefined &&
+      window._lastHabitatPokemonId !== null &&
+      newPokemonId &&
+      String(window._lastHabitatPokemonId) !== String(newPokemonId)
+    ))
   ){
     // Limpiar SIEMPRE las marcas, tanto en mapas estáticos como animados.
     // `strokes` contiene las marcas dibujadas por el editor.
@@ -1848,29 +1867,62 @@ function clearMarksOnPokemonChange(){
 }
 
 function populatePokemonSelect(){
-  const previousHabitatPokemonId = csvPokemonSelect.value;
   const records = getRecordsForCurrentMap();
-  const version = csvVersionSelect.value;
-  const seen = new Map();
+  const versions = [...new Set(records.map(r => r.version))];
+  const fireRed = new Map();
+  const leafGreen = new Map();
 
-  records
-    .filter(r => r.version === version)
-    .forEach(r => {
-      if (!seen.has(r.pokemonId)) seen.set(r.pokemonId, r.pokemon);
-    });
+  records.forEach(r => {
+    if (r.version === 'FireRed' && !fireRed.has(r.pokemonId)) fireRed.set(r.pokemonId, r.pokemon);
+    if (r.version === 'LeafGreen' && !leafGreen.has(r.pokemonId)) leafGreen.set(r.pokemonId, r.pokemon);
+  });
 
-  const entries = [...seen.entries()].sort((a,b) => a[0] - b[0]);
+  const bothIds = [...fireRed.keys()].filter(id => leafGreen.has(id)).sort((a,b) => a-b);
+  const fireRedOnly = [...fireRed.keys()].filter(id => !leafGreen.has(id)).sort((a,b) => a-b);
+  const leafGreenOnly = [...leafGreen.keys()].filter(id => !fireRed.has(id)).sort((a,b) => a-b);
 
-  csvPokemonSelect.innerHTML = entries.length
-    ? entries.map(([id, name]) =>
-        `<option value="${id}">#${String(id).padStart(3, '0')} ${name}</option>`
-      ).join('')
-    : '<option value="">No hay Pokémon para esta versión</option>';
+  csvPokemonBothSelect.innerHTML = bothIds.length
+    ? bothIds.map(id => `<option value="${id}">#${String(id).padStart(3,'0')} ${fireRed.get(id)}</option>`).join('')
+    : '<option value="">No hay Pokémon comunes</option>';
 
+  csvPokemonExclusiveSelect.innerHTML = [
+    '<option value="">Selecciona un exclusivo</option>',
+    fireRedOnly.length ? '<optgroup label="FireRed">' + fireRedOnly.map(id => `<option value="FR:${id}">#${String(id).padStart(3,'0')} ${fireRed.get(id)}</option>`).join('') + '</optgroup>' : '',
+    leafGreenOnly.length ? '<optgroup label="LeafGreen">' + leafGreenOnly.map(id => `<option value="LG:${id}">#${String(id).padStart(3,'0')} ${leafGreen.get(id)}</option>`).join('') + '</optgroup>' : ''
+  ].join('');
+
+  // Mantener un select interno con el Pokémon activo para reutilizar toda la lógica existente.
+  csvPokemonSelect.innerHTML = '<option value="">Selecciona un Pokémon arriba</option>';
+  csvPokemonSelect.value = '';
+  csvPokemonSelect.style.display = 'none';
   populateLocationSelect();
 }
-;
 
+function setSelectedPokemon(id, version){
+  if (!id) return;
+  // Cambiar desde las listas “Ambos”/“Exclusivos” también debe limpiar
+  // las marcas del Pokémon que se estaba editando.
+  clearMarksOnPokemonChange(true);
+  csvVersionSelect.value = version;
+  csvPokemonSelect.innerHTML = `<option value="${id}">#${String(id).padStart(3,'0')} Pokémon</option>`;
+  csvPokemonSelect.value = String(id);
+  populateLocationSelect();
+}
+
+csvPokemonBothSelect.addEventListener('change', () => {
+  const id = Number(csvPokemonBothSelect.value);
+  if (!id) return;
+  setSelectedPokemon(id, csvVersionSelect.value || 'FireRed');
+  csvPokemonExclusiveSelect.value = '';
+});
+
+csvPokemonExclusiveSelect.addEventListener('change', () => {
+  const value = csvPokemonExclusiveSelect.value;
+  if (!value) return;
+  const [prefix, id] = value.split(':');
+  setSelectedPokemon(Number(id), prefix === 'FR' ? 'FireRed' : 'LeafGreen');
+  csvPokemonBothSelect.value = '';
+});
 
 function populateLocationSelect(){
   const records = getRecordsForCurrentMap();
@@ -1963,7 +2015,10 @@ function fillFromSelectedLocation(){
   jsonCoordsStatus.className = 'status ok';
 }
 
-csvVersionSelect.addEventListener('change', populatePokemonSelect);
+csvVersionSelect.addEventListener('change', () => {
+  clearMarksOnPokemonChange(true);
+  populatePokemonSelect();
+});
 csvPokemonSelect.addEventListener('change', () => {
   clearMarksOnPokemonChange();
   populateLocationSelect();
