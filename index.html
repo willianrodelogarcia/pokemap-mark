@@ -675,7 +675,7 @@
 
   <div class="export-panel" id="coordsPanel" style="display:none;">
     <h2>Áreas de hábitat (desde JSON)</h2>
-    <p class="hint" style="margin-top:-4px;">Elige Pokémon y ubicación para cargar el área completa desde el JSON. Las rutas/ciudades usan su área regional y las zonas especiales su marcador de hábitat.</p>
+    <p class="hint" style="margin-top:-4px;">Elige Pokémon y ubicación para cargar el área completa desde el JSON. Pulsa «Colocar marca aquí» para agregar la ubicación. El Nº Pokédex y el nombre del mapa se completan automáticamente; si marcas varias ubicaciones, se concatenan con coma.</p>
     <div class="field-row">
       <div class="field">
         <label for="csvVersionSelect">Versión</label>
@@ -1784,7 +1784,71 @@ function populateCoordSelects(){
   populatePokemonSelect();
 }
 
+function clearMarksOnPokemonChange(){
+  const newPokemonId = csvPokemonSelect.value;
+
+  if (
+    window._lastHabitatPokemonId !== undefined &&
+    window._lastHabitatPokemonId !== null &&
+    newPokemonId &&
+    String(window._lastHabitatPokemonId) !== String(newPokemonId)
+  ){
+    // Limpiar SIEMPRE las marcas, tanto en mapas estáticos como animados.
+    // `strokes` contiene las marcas dibujadas por el editor.
+    strokes = [];
+
+    // Limpiar cualquier estado de ubicación/hábitat acumulado.
+    selectedHabitatLocations = [];
+    selectedRecord = null;
+
+    coordX.value = '';
+    coordY.value = '';
+    coordPokemonId.value = '';
+    pokedexIdInput.value = '';
+    mapNameInput.value = '';
+
+    // Reiniciar el mapa/GIF cargado para evitar conservar visualmente
+    // la selección anterior.
+    existingPokemonMap = null;
+    gifAsset = null;
+    uploadedMapUrl = null;
+
+    if (typeof gifPreview !== 'undefined'){
+      gifPreview.removeAttribute('src');
+      gifPreview.style.display = 'none';
+    }
+
+    if (typeof resultUrl !== 'undefined'){
+      resultUrl.style.display = 'none';
+      resultUrl.textContent = '';
+    }
+
+    if (typeof activeGifNote !== 'undefined'){
+      activeGifNote.style.display = 'none';
+      activeGifNote.textContent = '';
+    }
+
+    setExistingMapStatus('');
+    lockMapUploadControls(false);
+
+    // No conservar la asociación del Pokémon anterior.
+    associatedPokemon = [];
+    renderPokemonChips();
+
+    // Importante: redrawStrokes() se ejecuta independientemente de si el
+    // mapa actual es estático o animado.
+    redrawStrokes();
+
+    coordsStatus.textContent =
+      'Se borraron las marcas anteriores porque cambiaste de Pokémon.';
+    coordsStatus.className = 'status ok';
+  }
+
+  window._lastHabitatPokemonId = newPokemonId;
+}
+
 function populatePokemonSelect(){
+  const previousHabitatPokemonId = csvPokemonSelect.value;
   const records = getRecordsForCurrentMap();
   const version = csvVersionSelect.value;
   const seen = new Map();
@@ -1805,6 +1869,8 @@ function populatePokemonSelect(){
 
   populateLocationSelect();
 }
+;
+
 
 function populateLocationSelect(){
   const records = getRecordsForCurrentMap();
@@ -1849,6 +1915,11 @@ function populateLocationSelect(){
 
   csvLocationSelect.dataset.records = JSON.stringify(enrichedLocs);
 
+  // Cambiar de Pokémon inicia una nueva lista de ubicaciones.
+  selectedHabitatLocations = [];
+  mapNameInput.value = '';
+  coordPokemonId.value = '';
+
   // Clear the coordinate fields until the exact location is selected.
   coordX.value = '';
   coordY.value = '';
@@ -1878,6 +1949,7 @@ function fillFromSelectedLocation(){
   coordX.value = exact ? Math.round(exact.left + exact.width / 2) : (record.x ?? '');
   coordY.value = exact ? Math.round(exact.top + exact.height / 2) : (record.y ?? '');
   coordPokemonId.value = record.pokemonId;
+  pokedexIdInput.value = record.pokemonId;
 
   const geomMaster = getRecordGeometry(record);
   const exactStatus = geomMaster?.canvas960;
@@ -1892,7 +1964,10 @@ function fillFromSelectedLocation(){
 }
 
 csvVersionSelect.addEventListener('change', populatePokemonSelect);
-csvPokemonSelect.addEventListener('change', populateLocationSelect);
+csvPokemonSelect.addEventListener('change', () => {
+  clearMarksOnPokemonChange();
+  populateLocationSelect();
+});
 csvLocationSelect.addEventListener('change', fillFromSelectedLocation);
 
 
@@ -1931,6 +2006,36 @@ const placeCoordBtn = document.getElementById('placeCoordBtn');
 const coordsStatus = document.getElementById('coordsStatus');
 
 let pendingPokemonFromCsv = [];
+
+// Ubicaciones marcadas para el Pokémon actual.
+let selectedHabitatLocations = [];
+
+function syncHabitatFields(){
+  const selectedRecord = getSelectedCoordRecord();
+  if (!selectedRecord) return;
+
+  const pokemonId = Number(selectedRecord.pokemonId);
+
+  // Hay dos campos relacionados con el Pokémon:
+  // - coordPokemonId: coordenadas/manual
+  // - pokedexIdInput: asociación del mapa que se guarda en BD
+  if (Number.isFinite(pokemonId) && pokemonId > 0){
+    coordPokemonId.value = pokemonId;
+    pokedexIdInput.value = pokemonId;
+  }
+
+  const locationName = String(selectedRecord.location || '').trim();
+  if (locationName && !selectedHabitatLocations.includes(locationName)){
+    selectedHabitatLocations.push(locationName);
+  }
+
+  // Ejemplo: "Ruta 2, Bosque Verde, Ruta 3"
+  mapNameInput.value = selectedHabitatLocations.join(', ');
+
+  existingPokemonMap = null;
+  setExistingMapStatus('');
+  lockMapUploadControls(false);
+}
 
 function getSelectedCoordRecord(){
   const locs = JSON.parse(csvLocationSelect.dataset.records || '[]');
@@ -2074,6 +2179,13 @@ placeCoordBtn.onclick = async () => {
 
   if (selectedRecord){
     strokes.push(createHabitatStroke(selectedRecord));
+
+    // Completa automáticamente Nº Pokédex y acumula el nombre de la ubicación.
+    syncHabitatFields();
+
+    // Mantener el campo visible listo para la asociación/guardado.
+    pokedexIdInput.value = selectedRecord.pokemonId;
+
     redrawStrokes();
 
     coordsStatus.textContent =
@@ -2081,7 +2193,8 @@ placeCoordBtn.onclick = async () => {
       `${selectedRecord.geometry}, ` +
       `${selectedRecord.width}×${selectedRecord.height}px ` +
       `centrada en (${selectedRecord.x}, ${selectedRecord.y}) ` +
-      `del mapa 960×640.`;
+      `del mapa 960×640. ` +
+      `Mapa: ${mapNameInput.value}`;
 
     coordsStatus.className = 'status ok';
   } else {
@@ -2298,6 +2411,9 @@ function setupCanvas(image){
   existingPokemonMap = null;
   setExistingMapStatus('');
   lockMapUploadControls(false);
+
+  selectedHabitatLocations = [];
+  mapNameInput.value = '';
 
   renderPokemonChips();
 
