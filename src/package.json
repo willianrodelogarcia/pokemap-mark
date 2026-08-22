@@ -1,0 +1,21 @@
+{
+  "name": "pokemap-mark",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "node --watch --env-file=.env index.js",
+    "start": "node src/index.js",
+    "sync:pokemon": "node --env-file=.env scripts/sync-pokemon.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.13.1",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.112.3",
+    "axios": "^1.19.0",
+    "cors": "^2.8.6",
+    "express": "^5.2.1"
+  }
+}
