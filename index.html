@@ -191,6 +191,7 @@
     flex:1;
     min-width:160px;
   }
+  .cached-badge{font-size:.6rem;color:var(--accent);font-weight:normal;}
   .field input{
     font-family:inherit;
     font-size:.8rem;
@@ -448,6 +449,71 @@
     font-weight:bold;
     text-transform:capitalize;
   }
+  .pokedex-map-list{
+    margin-top:5px;
+    font-size:.62rem;
+    color:var(--accent);
+  }
+  .pokedex-card{
+    cursor:pointer;
+  }
+  .pokedex-map-preview{
+    margin-top:10px;
+    padding-top:10px;
+    border-top:1px solid var(--panel-edge);
+  }
+  .pokedex-map-preview[hidden]{
+    display:none;
+  }
+  .pokedex-map-preview-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    margin-bottom:7px;
+  }
+  .pokedex-map-preview-title{
+    font-size:.72rem;
+    font-weight:bold;
+    text-transform:capitalize;
+  }
+  .pokedex-map-preview-content{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 170px;
+    gap:10px;
+    align-items:start;
+  }
+  .pokedex-map-preview-image{
+    width:100%;
+    max-height:180px;
+    object-fit:contain;
+    border:1px solid var(--panel-edge);
+    background:#fff;
+    border-radius:3px;
+    cursor:pointer;
+  }
+  .pokedex-map-list{
+    margin-top:5px;
+    font-size:.62rem;
+    color:var(--accent);
+  }
+  .pokedex-map-list-item{
+    display:block;
+    margin-top:2px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  @media (max-width:700px){
+    .pokedex-map-preview-content{
+      grid-template-columns:1fr;
+    }
+  }
+  .pokedex-map-item{
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
   .pokedex-loading,
   .pokedex-empty{
     grid-column:1/-1;
@@ -457,45 +523,7 @@
     border:1px dashed var(--panel-edge);
     border-radius:4px;
     font-size:.72rem;
-  }
-  .pokedex-detail{
-    margin-top:12px;
-    border-top:1px solid var(--panel-edge);
-    padding-top:12px;
-  }
-  .pokedex-detail-card{
-    display:flex;
-    gap:18px;
-    align-items:center;
-    padding:12px;
-    border:1px solid var(--panel-edge);
-    border-radius:4px;
-    background:#fff;
-  }
-  .pokedex-detail-card img{
-    width:120px;
-    height:120px;
-    image-rendering:pixelated;
-    object-fit:contain;
-  }
-  .pokedex-detail-card h3{
-    margin:0 0 4px;
-    text-transform:capitalize;
-  }
-  .pokedex-detail-number{
-    color:var(--accent);
-    font-size:.72rem;
-  }
-  .pokedex-stat-list{
-    margin:8px 0 0;
-    padding:0;
-    list-style:none;
-    font-size:.7rem;
-  }
-  .pokedex-stat-list li{
-    margin:3px 0;
-  }
-</style>
+  }</style>
 </style>
 <style>
 #dropzone.loading { opacity: .75; pointer-events: none; }
@@ -572,7 +600,7 @@
       <div class="pokedex-head">
         <div>
           <h2>Pokédex</h2>
-          <p class="hint">Consulta todos los Pokémon disponibles desde PokéAPI.</p>
+          <p class="hint">Pokémon registrados en tu base de datos.</p>
         </div>
         <span class="pokedex-badge">POKÉDEX</span>
       </div>
@@ -587,12 +615,7 @@
       </div>
 
       <div class="pokedex-grid" id="pokedexGrid">
-        <div class="pokedex-loading">Cargando Pokédex…</div>
-      </div>
-
-      <div class="pokedex-detail" id="pokedexDetail" hidden>
-        <button type="button" class="secondary" id="pokedexCloseDetail">← Volver</button>
-        <div id="pokedexDetailContent"></div>
+        <div class="pokedex-loading">Cargando Pokémon…</div>
       </div>
     </section>
 
@@ -696,16 +719,16 @@
     <h2>1 · Generar GIF y subirlo a Cloudinary</h2>
     <div class="field-row">
       <div class="field">
-        <label for="cloudName">Cloud name</label>
+        <label for="cloudName">Cloud name <span class="cached-badge" data-cache-badge="cloudName"></span></label>
         <input type="text" id="cloudName" placeholder="ej. dxy1abcde" autocomplete="off">
       </div>
       <div class="field">
-        <label for="uploadPreset">Upload preset (sin firmar)</label>
+        <label for="uploadPreset">Upload preset (sin firmar) <span class="cached-badge" data-cache-badge="uploadPreset"></span></label>
         <input type="text" id="uploadPreset" placeholder="ej. marcas_unsigned" autocomplete="off">
       </div>
       <div class="field">
         <label for="gifFolderInput">Carpeta en Cloudinary</label>
-        <input type="text" id="gifFolderInput" value="mapas/campo_libre" autocomplete="off">
+        <input type="text" id="gifFolderInput" value="mapas/rojoFuego" autocomplete="off">
       </div>
     </div>
     <div class="export-actions">
@@ -745,8 +768,9 @@
       </div>
     </details>
 
-    <h2 style="margin-top:18px;">2 · Asociar Pokémon (opcional, se puede hacer después)</h2>
+    <h2 style="margin-top:18px;">2 · Asociar Pokémon *</h2>
     <div id="activeGifNote" class="hint" style="display:none; margin-top:-4px;"></div>
+<p class="hint" style="margin-top:-4px;">Debes asociar al menos un Pokémon antes de guardar este mapa en la base de datos.</p>
     <div class="field-row">
       <div class="field" style="max-width:160px;">
         <label for="pokedexIdInput">Número de Pokédex</label>
@@ -758,19 +782,24 @@
     </div>
     <div id="pokemonChips" style="display:flex; flex-wrap:wrap; gap:8px; margin:4px 0 4px;"></div>
     <span class="status" id="pokemonAddStatus"></span>
+    <span class="status" id="existingMapStatus"></span>
 
     <h2 style="margin-top:18px;">3 · Guardar en tu base de datos</h2>
     <div class="field-row">
+      <div class="field">
+        <label for="mapNameInput">Nombre del mapa</label>
+        <input type="text" id="mapNameInput" placeholder="ej. Ruta 25" autocomplete="off">
+      </div>
       <div class="field" style="flex:2;">
-        <label for="dbEndpoint">Endpoint de tu backend (POST)</label>
+        <label for="dbEndpoint">Endpoint de tu backend (POST) <span class="cached-badge" data-cache-badge="dbEndpoint"></span></label>
         <input type="text" id="dbEndpoint" placeholder="https://tu-api.com/marcas" autocomplete="off">
       </div>
     </div>
     <div class="export-actions">
-      <button id="saveVariantBtn" disabled>Guardar GIF (con o sin Pokémon)</button>
+      <button id="saveVariantBtn" disabled>Guardar mapa y Pokémon</button>
       <span class="status" id="variantStatus"></span>
     </div>
-    <p class="hint" style="margin-top:6px;">Envía <code>{ gifUrl, publicId, pokemonIds: [], width, height, createdAt }</code> a tu backend. <code>pokemonIds</code> puede ir vacío — luego puedes hacer otro POST (o un PATCH del lado de tu backend) al volver a este mismo GIF y añadir Pokémon.</p>
+    <p class="hint" style="margin-top:6px;">La URL de Cloudinary se obtiene automáticamente al terminar la subida. Se envía un registro por Pokémon con <code>{ pokemon_id, map_name, map_url }</code>, compatible con <code>public.pokemon_maps</code>.</p>
 
     <details style="margin-top:16px;">
       <summary style="cursor:pointer; font-size:.8rem; color:var(--accent);">Avanzado: reutilizar la imagen base sin volver a subirla en cada prueba</summary>
@@ -821,6 +850,117 @@ const cloudNameInput = document.getElementById('cloudName');
 const uploadPresetInput = document.getElementById('uploadPreset');
 const gifFolderInput = document.getElementById('gifFolderInput');
 const dbEndpointInput = document.getElementById('dbEndpoint');
+const mapNameInput = document.getElementById('mapNameInput');
+
+const PERSISTED_CONFIG_KEY = 'marcador-rutas-config';
+
+function persistConfigData(){
+  const config = {
+    cloudName: cloudNameInput.value.trim(),
+    uploadPreset: uploadPresetInput.value.trim(),
+    dbEndpoint: dbEndpointInput.value.trim()
+  };
+
+  localStorage.setItem(
+    PERSISTED_CONFIG_KEY,
+    JSON.stringify(config)
+  );
+}
+
+function loadPersistedConfig(){
+  try{
+    const raw = localStorage.getItem(PERSISTED_CONFIG_KEY);
+    if (!raw) return;
+
+    const config = JSON.parse(raw);
+
+    if (config.cloudName){
+      cloudNameInput.value = config.cloudName;
+    }
+
+    if (config.uploadPreset){
+      uploadPresetInput.value = config.uploadPreset;
+    }
+
+    if (config.dbEndpoint){
+      dbEndpointInput.value = config.dbEndpoint;
+    }
+  }catch(error){
+    console.warn(
+      '[Configuración] No se pudo recuperar la configuración persistida.',
+      error
+    );
+  }
+}
+
+/*
+ * La configuración se persiste automáticamente al salir de cada campo.
+ * No es necesario pulsar ningún botón.
+ */
+[
+  cloudNameInput,
+  uploadPresetInput,
+  dbEndpointInput
+].forEach(input => {
+  input.addEventListener('blur', persistConfigData);
+});
+
+loadPersistedConfig();
+
+mapNameInput?.addEventListener('blur', () => {
+  existingPokemonMap = null;
+  setExistingMapStatus('');
+  lockMapUploadControls(false);
+});
+
+
+// Configuración persistente: se guarda en localStorage del navegador.
+const CACHE_KEYS = {
+  cloudName: 'marcador_rutas_cloud_name',
+  uploadPreset: 'marcador_rutas_upload_preset',
+  dbEndpoint: 'marcador_rutas_db_endpoint'
+};
+
+function loadCachedConfig(){
+  [
+    [cloudNameInput, CACHE_KEYS.cloudName],
+    [uploadPresetInput, CACHE_KEYS.uploadPreset],
+    [dbEndpointInput, CACHE_KEYS.dbEndpoint]
+  ].forEach(([input, key]) => {
+    const value = localStorage.getItem(key);
+    if (value) input.value = value;
+  });
+}
+
+function saveCachedConfig(){
+  [
+    [cloudNameInput, CACHE_KEYS.cloudName],
+    [uploadPresetInput, CACHE_KEYS.uploadPreset],
+    [dbEndpointInput, CACHE_KEYS.dbEndpoint]
+  ].forEach(([input, key]) => {
+    const value = input.value.trim();
+    if (value) localStorage.setItem(key, value);
+    else localStorage.removeItem(key);
+  });
+}
+
+function updateCacheBadges(){
+  document.querySelectorAll('[data-cache-badge]').forEach(badge => {
+    const key = CACHE_KEYS[badge.dataset.cacheBadge];
+    badge.textContent = key && localStorage.getItem(key) ? '· guardado' : '';
+  });
+}
+
+loadCachedConfig();
+[cloudNameInput, uploadPresetInput, dbEndpointInput].forEach(input => {
+  input.addEventListener('change', () => {
+    saveCachedConfig();
+    updateCacheBadges();
+  });
+});
+updateCacheBadges();
+
+let uploadedMapUrl = null;
 const uploadBaseBtn = document.getElementById('uploadBaseBtn');
 const baseFolderInput = document.getElementById('baseFolderInput');
 const baseStatus = document.getElementById('baseStatus');
@@ -983,36 +1123,27 @@ const pokedexPanel = document.getElementById('pokedexPanel');
 const pokedexSearch = document.getElementById('pokedexSearch');
 const pokedexGrid = document.getElementById('pokedexGrid');
 const pokedexCount = document.getElementById('pokedexCount');
-const pokedexDetail = document.getElementById('pokedexDetail');
-const pokedexDetailContent = document.getElementById('pokedexDetailContent');
-const pokedexCloseDetail = document.getElementById('pokedexCloseDetail');
 
 let pokedexPokemon = [];
-let pokedexLoaded = false;
 
 function normalizePokedexText(value){
   return String(value || '')
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[\\u0300-\\u036f]/g, '')
     .toLowerCase()
     .trim();
 }
 
-function pokemonSpriteUrl(id){
-  return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
-}
+let selectedPokedexPokemonId = null;
 
 function renderPokedex(){
   const query = normalizePokedexText(pokedexSearch.value);
 
-  const filtered = pokedexPokemon.filter(p => {
-    if (!query) return true;
-
-    return (
-      String(p.id).includes(query) ||
-      normalizePokedexText(p.name).includes(query)
-    );
-  });
+  const filtered = pokedexPokemon.filter(p => (
+    !query ||
+    String(p.dex_number).includes(query) ||
+    normalizePokedexText(p.name).includes(query)
+  ));
 
   pokedexCount.textContent =
     `${filtered.length} de ${pokedexPokemon.length} Pokémon`;
@@ -1023,131 +1154,185 @@ function renderPokedex(){
     return;
   }
 
-  pokedexGrid.innerHTML = filtered.map(p => `
-    <button
-      type="button"
-      class="pokedex-card"
-      data-pokedex-id="${p.id}">
-      <img
-        src="${pokemonSpriteUrl(p.id)}"
-        alt="${p.name}"
-        loading="lazy">
-      <span>
-        <span class="pokedex-number">#${String(p.id).padStart(3,'0')}</span><br>
-        <span class="pokedex-name">${p.name}</span>
-      </span>
-    </button>
-  `).join('');
+  pokedexGrid.innerHTML = filtered.map(p => {
+    const maps = Array.isArray(p.pokemon_maps) ? p.pokemon_maps : [];
+    const isSelected = selectedPokedexPokemonId === p.id;
+
+    return `
+      <button
+        type="button"
+        class="pokedex-card"
+        data-pokedex-id="${p.id}"
+        aria-pressed="${isSelected}">
+        <img
+          src="${p.pokemon_sprite_gif || p.pokemon_sprite || ''}"
+          onerror="this.onerror=null;this.src='${p.pokemon_sprite || ''}'"
+          alt="${p.name}"
+          loading="lazy">
+        <span style="min-width:0;">
+          <span class="pokedex-number">
+            #${String(p.dex_number).padStart(3,'0')}
+          </span><br>
+          <span class="pokedex-name">${p.name}</span>
+          <span class="pokedex-map-list">
+            ${maps.length
+              ? `${maps.length} mapa${maps.length === 1 ? '' : 's'}`
+              : 'Sin mapas registrados'}
+          </span>
+        </span>
+      </button>
+    `;
+  }).join('');
 
   pokedexGrid.querySelectorAll('.pokedex-card').forEach(card => {
     card.addEventListener('click', () => {
-      showPokedexDetail(Number(card.dataset.pokedexId));
+      showPokemonMapPreview(Number(card.dataset.pokedexId));
     });
   });
+
+  renderPokemonMapPreview();
+}
+
+function showPokemonMapPreview(pokemonId){
+  selectedPokedexPokemonId =
+    selectedPokedexPokemonId === pokemonId ? null : pokemonId;
+
+  renderPokedex();
+}
+
+function renderPokemonMapPreview(){
+  const oldPreview = document.getElementById('pokedexMapPreview');
+  if (oldPreview) oldPreview.remove();
+
+  if (selectedPokedexPokemonId === null) return;
+
+  const pokemon = pokedexPokemon.find(
+    p => p.id === selectedPokedexPokemonId
+  );
+
+  if (!pokemon) return;
+
+  const maps = Array.isArray(pokemon.pokemon_maps)
+    ? pokemon.pokemon_maps
+    : [];
+
+  const preview = document.createElement('div');
+  preview.id = 'pokedexMapPreview';
+  preview.className = 'pokedex-map-preview';
+
+  if (!maps.length){
+    preview.innerHTML = `
+      <div class="pokedex-map-preview-head">
+        <span class="pokedex-map-preview-title">
+          ${pokemon.name} · mapas
+        </span>
+      </div>
+      <div class="pokedex-empty">
+        Este Pokémon todavía no tiene mapas registrados.
+      </div>
+    `;
+  } else {
+    const firstMap = maps[0];
+
+    preview.innerHTML = `
+      <div class="pokedex-map-preview-head">
+        <span class="pokedex-map-preview-title">
+          ${pokemon.name} · ${maps.length} mapa${maps.length === 1 ? '' : 's'}
+        </span>
+        <button
+          type="button"
+          class="secondary"
+          id="closePokedexMapPreview">
+          Cerrar
+        </button>
+      </div>
+
+      <div class="pokedex-map-preview-content">
+        <div>
+          <div class="hint" style="margin-bottom:5px;">
+            ${firstMap.map_name}
+          </div>
+          <img
+            class="pokedex-map-preview-image"
+            src="${firstMap.map_url}"
+            alt="${firstMap.map_name}"
+            title="Abrir mapa"
+            loading="lazy">
+        </div>
+
+        <div>
+          <div class="hint" style="margin-bottom:5px;">
+            Mapas registrados
+          </div>
+          ${maps.map((map, index) => `
+            <button
+              type="button"
+              class="secondary pokedex-map-select"
+              data-map-index="${index}"
+              style="display:block;width:100%;margin-bottom:5px;text-align:left;">
+              ${map.map_name}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    `;
+
+    const img = preview.querySelector('.pokedex-map-preview-image');
+    const title = preview.querySelector('.hint');
+
+    preview.querySelectorAll('.pokedex-map-select').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const map = maps[Number(btn.dataset.mapIndex)];
+        if (!map) return;
+
+        img.src = map.map_url;
+        img.alt = map.map_name;
+        title.textContent = map.map_name;
+      });
+    });
+
+    preview.querySelector('#closePokedexMapPreview')
+      ?.addEventListener('click', () => {
+        selectedPokedexPokemonId = null;
+        renderPokedex();
+      });
+  }
+
+  pokedexPanel.appendChild(preview);
 }
 
 async function loadPokedex(){
   pokedexGrid.innerHTML =
-    '<div class="pokedex-loading">Cargando Pokémon desde PokéAPI…</div>';
+    '<div class="pokedex-loading">Cargando Pokémon…</div>';
 
   try{
-    /*
-     * limit=2000 evita limitar la Pokédex a los 386 Pokémon de FireRed.
-     * PokéAPI devolverá los Pokémon disponibles en su listado actual.
-     */
     const response = await fetch(
-      'https://pokeapi.co/api/v2/pokemon?limit=2000&offset=0'
+      'https://pokemap-mark.onrender.com/api/pokemon/mapas'
     );
 
     if (!response.ok){
-      throw new Error(`PokéAPI respondió ${response.status}`);
+      throw new Error(`Backend respondió ${response.status}`);
     }
 
     const result = await response.json();
 
-    pokedexPokemon = (result.results || [])
-      .map((pokemon, index) => ({
-        id: index + 1,
-        name: pokemon.name,
-        url: pokemon.url
-      }))
-      .filter(p => p.id <= result.count);
+    pokedexPokemon = Array.isArray(result) ? result : [];
 
-    pokedexLoaded = true;
     renderPokedex();
 
   } catch(error){
     console.error('[Pokédex]', error);
 
     pokedexGrid.innerHTML =
-      '<div class="pokedex-empty">No se pudo cargar la Pokédex desde PokéAPI.</div>';
+      '<div class="pokedex-empty">No se pudo cargar la Pokédex.</div>';
+
     pokedexCount.textContent = 'Error al cargar';
-  }
-}
-
-async function showPokedexDetail(id){
-  const pokemon = pokedexPokemon.find(p => p.id === id);
-  if (!pokemon) return;
-
-  pokedexGrid.hidden = true;
-  document.querySelector('.pokedex-toolbar').hidden = true;
-  pokedexDetail.hidden = false;
-
-  pokedexDetailContent.innerHTML =
-    '<div class="pokedex-loading">Cargando información…</div>';
-
-  try{
-    const response = await fetch(
-      `https://pokeapi.co/api/v2/pokemon/${id}`
-    );
-
-    if (!response.ok){
-      throw new Error(`PokéAPI respondió ${response.status}`);
-    }
-
-    const detail = await response.json();
-
-    const types = detail.types
-      .map(t => t.type.name)
-      .join(', ');
-
-    pokedexDetailContent.innerHTML = `
-      <div class="pokedex-detail-card">
-        <img
-          src="${detail.sprites?.front_default || pokemonSpriteUrl(id)}"
-          alt="${detail.name}">
-        <div>
-          <div class="pokedex-detail-number">
-            #${String(detail.id).padStart(3,'0')}
-          </div>
-          <h3>${detail.name}</h3>
-          <ul class="pokedex-stat-list">
-            <li><strong>Tipo:</strong> ${types}</li>
-            <li><strong>Altura:</strong> ${detail.height / 10} m</li>
-            <li><strong>Peso:</strong> ${detail.weight / 10} kg</li>
-          </ul>
-        </div>
-      </div>
-    `;
-
-  } catch(error){
-    console.error('[Pokédex detalle]', error);
-
-    pokedexDetailContent.innerHTML =
-      '<div class="pokedex-empty">No se pudo cargar el detalle del Pokémon.</div>';
   }
 }
 
 pokedexSearch.addEventListener('input', renderPokedex);
 
-pokedexCloseDetail.addEventListener('click', () => {
-  pokedexDetail.hidden = true;
-  pokedexGrid.hidden = false;
-  document.querySelector('.pokedex-toolbar').hidden = false;
-});
-
 loadPokedex();
-
 
 // Base map images already uploaded to Cloudinary, ready to reuse without
 // picking a file from disk each time. The source of truth is mapas-base.json
@@ -1222,7 +1407,6 @@ function renderBaseImageGallery(){
         region: preset.region || getPresetRegion(preset)
       };
       currentMapLabel.textContent = 'Mapa actual: ' + preset.name;
-      console.info('[Mapa] Seleccionando mapa guardado:', currentBasePreset);
       if (coordRecords.length){
         populateCoordSelects();
       }
@@ -1302,12 +1486,6 @@ function loadImageFromUrl(url, preset = null){
     if (finished) return;
     finished = true;
 
-    console.error('[Mapa] Error cargando imagen base:', {
-      url: originalUrl,
-      message,
-      detail
-    });
-
     showBaseImageError(
       `${message}` +
       (detail ? `<br><span style="font-size:.7rem;">${detail}</span>` : '') +
@@ -1323,12 +1501,6 @@ function loadImageFromUrl(url, preset = null){
       finishError('La imagen se recibió pero el navegador no pudo decodificarla.');
       return;
     }
-
-    console.info('[Mapa] Imagen base cargada:', {
-      url: originalUrl,
-      width: image.naturalWidth,
-      height: image.naturalHeight
-    });
 
     setupCanvas(image);
   };
@@ -1970,6 +2142,128 @@ let gifAsset = null; // { publicId, secureUrl, width, height }
 // Pokémon (by Pokédex number) associated with the current GIF: [{ id, name, sprite }]
 let associatedPokemon = [];
 
+// Mapa existente encontrado en la BD para el Pokémon/mapa actual.
+let existingPokemonMap = null;
+const pokemonMapsEndpoint = 'https://pokemap-mark.onrender.com/api/pokemon/map';
+const existingMapStatus = document.getElementById('existingMapStatus');
+
+function setExistingMapStatus(message, kind = ''){
+  if (!existingMapStatus) return;
+  existingMapStatus.textContent = message;
+  existingMapStatus.className = 'status' + (kind ? ' ' + kind : '');
+}
+
+function lockMapUploadControls(locked){
+  generateGifBtn.disabled = locked;
+  uploadBaseBtn.disabled = locked;
+  generateGifBtn.title = locked
+    ? 'Este mapa ya existe en la base de datos para el Pokémon seleccionado.'
+    : '';
+  uploadBaseBtn.title = locked
+    ? 'Este mapa ya existe en la base de datos para el Pokémon seleccionado.'
+    : '';
+}
+
+async function findExistingPokemonMap(pokemonId){
+  const mapName =
+    (mapNameInput?.value || currentBasePreset?.name || '').trim();
+
+  if (!mapName) return null;
+
+  const response = await fetch(`${pokemonMapsEndpoint}/${pokemonId}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mapName })
+  });
+  if (!response.ok){
+    throw new Error(
+      'No se pudieron consultar los mapas existentes: ' + response.status
+    );
+  }
+
+  const result = await response.json();
+  const mapList = Array.isArray(result.pokemon_maps) ? result.pokemon_maps : [];
+  
+
+  const map = mapList.find(item =>
+    Number(item.pokemon_id) === Number(pokemonId)
+  );
+
+  if (!map){
+    return null;
+  }
+
+  if (String(map.map_name || '').trim().toLowerCase() !== mapName.toLowerCase()){
+    return null;
+  }
+  
+  return map;
+}
+
+async function loadExistingPokemonMapIfAvailable(pokemon){
+  try{
+    setExistingMapStatus('Comprobando si ya existe este mapa…');
+
+    const existingMap = await findExistingPokemonMap(pokemon.id);
+
+    if (!existingMap){
+      existingPokemonMap = null;
+      setExistingMapStatus(
+        'No existe una ubicación guardada para este Pokémon en este mapa. Puedes generar el mapa.',
+        'ok'
+      );
+      lockMapUploadControls(false);
+      return false;
+    }
+
+    existingPokemonMap = existingMap;
+
+    uploadedMapUrl = existingMap.map_url;
+    gifAsset = {
+      publicId: existingMap.id
+        ? 'db-map-' + existingMap.id
+        : existingMap.map_url,
+      secureUrl: existingMap.map_url,
+      width: null,
+      height: null
+    };
+
+    gifPreview.src = existingMap.map_url;
+    gifPreview.style.display = 'block';
+
+    resultUrl.style.display = 'block';
+    resultUrl.innerHTML =
+      'Mapa existente: <a href="' + existingMap.map_url +
+      '" target="_blank" rel="noopener">' +
+      existingMap.map_url + '</a>';
+
+    activeGifNote.style.display = 'block';
+    activeGifNote.textContent =
+      'Este Pokémon ya tiene una ubicación guardada en "' +
+      existingMap.map_name +
+      '". Se cargó el mapa existente y se bloqueó una nueva subida.';
+
+    setExistingMapStatus('Mapa encontrado en la base de datos ✓', 'ok');
+    lockMapUploadControls(true);
+
+    // No permitimos crear un registro duplicado desde esta edición.
+    saveVariantBtn.disabled = true;
+
+    return true;
+
+  }catch(error){
+    console.error('[Mapas existentes]', error);
+    existingPokemonMap = null;
+    setExistingMapStatus(
+      'No se pudo comprobar el mapa existente: ' + error.message,
+      'error'
+    );
+    lockMapUploadControls(false);
+    return false;
+  }
+}
+
+
 function setupCanvas(image){
   img = image;
   const maxW = 900;
@@ -2001,6 +2295,9 @@ function setupCanvas(image){
   variantStatus.textContent = '';
   saveVariantBtn.disabled = true;
   associatedPokemon = [];
+  existingPokemonMap = null;
+  setExistingMapStatus('');
+  lockMapUploadControls(false);
 
   renderPokemonChips();
 
@@ -2503,6 +2800,7 @@ function uploadImageToCloudinary(source, cloudName, uploadPreset, folder){
 }
 
 uploadBaseBtn.onclick = async () => {
+  saveCachedConfig();
   const cloudName = cloudNameInput.value.trim();
   const uploadPreset = uploadPresetInput.value.trim();
   const folder = baseFolderInput.value.trim();
@@ -2597,6 +2895,7 @@ function generateGif(){
 }
 
 generateGifBtn.onclick = async () => {
+  saveCachedConfig();
   const cloudName = cloudNameInput.value.trim();
   const uploadPreset = uploadPresetInput.value.trim();
   const gifFolder = gifFolderInput.value.trim();
@@ -2605,8 +2904,12 @@ generateGifBtn.onclick = async () => {
   progress.style.display = 'none';
   progressBar.style.width = '0%';
   gifAsset = null;
+  uploadedMapUrl = null;
   saveVariantBtn.disabled = true;
   associatedPokemon = [];
+  existingPokemonMap = null;
+  setExistingMapStatus('');
+  lockMapUploadControls(false);
   renderPokemonChips();
 
   if (!cloudName || !uploadPreset){
@@ -2620,6 +2923,7 @@ generateGifBtn.onclick = async () => {
     const blob = await generateGif();
     setStatus('Subiendo GIF a Cloudinary…');
     const data = await uploadImageToCloudinary(blob, cloudName, uploadPreset, gifFolder);
+    uploadedMapUrl = data.secure_url;
     gifAsset = { publicId: data.public_id, secureUrl: data.secure_url, width: data.width, height: data.height };
     resultUrl.style.display = 'block';
     resultUrl.innerHTML = 'GIF: <a href="' + gifAsset.secureUrl + '" target="_blank" rel="noopener">' + gifAsset.secureUrl + '</a>';
@@ -2627,7 +2931,7 @@ generateGifBtn.onclick = async () => {
     gifPreview.style.display = 'block';
     activeGifNote.style.display = 'none';
     setStatus('Listo. Puedes asociar Pokémon ahora (paso 2) o guardarlo así y volver después.', 'ok');
-    saveVariantBtn.disabled = false;
+    saveVariantBtn.disabled = !gifAsset || associatedPokemon.length === 0;
 
     const entry = {
       publicId: gifAsset.publicId,
@@ -2674,12 +2978,13 @@ function renderGifGallery(){
 
 // Loads a gallery entry (or a freshly generated one) as the "active" GIF for the Pokémon-association step
 async function selectGifEntry(entry){
+  uploadedMapUrl = entry.secureUrl;
   gifAsset = { publicId: entry.publicId, secureUrl: entry.secureUrl, width: entry.width, height: entry.height };
   gifPreview.src = entry.secureUrl;
   gifPreview.style.display = 'block';
   resultUrl.style.display = 'block';
   resultUrl.innerHTML = 'GIF activo: <a href="' + entry.secureUrl + '" target="_blank" rel="noopener">' + entry.secureUrl + '</a>';
-  saveVariantBtn.disabled = false;
+  saveVariantBtn.disabled = !gifAsset || associatedPokemon.length === 0;
   activeGifNote.style.display = 'block';
   activeGifNote.textContent = 'Editando el mapa seleccionado arriba — ya tenía ' + entry.pokemonIds.length + ' Pokémon asociado(s).';
 
@@ -2775,6 +3080,7 @@ loadGifUrlBtn.onclick = () => {
 // --- Associate this GIF with one or more Pokémon (by Pokédex number) ---
 function renderPokemonChips(){
   pokemonChips.innerHTML = '';
+  saveVariantBtn.disabled = !gifAsset || associatedPokemon.length === 0;
   associatedPokemon.forEach(p => {
     const chip = document.createElement('span');
     chip.style.cssText = 'display:inline-flex; align-items:center; gap:6px; background:#fff; border:1px solid var(--panel-edge); border-radius:14px; padding:4px 6px 4px 10px; font-size:.75rem;';
@@ -2820,12 +3126,17 @@ addPokemonBtn.onclick = async () => {
     const res = await fetch('https://pokeapi.co/api/v2/pokemon/' + id);
     if (!res.ok) throw new Error('No existe un Pokémon con el número ' + id);
     const data = await res.json();
-    associatedPokemon.push({
+    const pokemon = {
       id: data.id,
       name: data.name,
       sprite: data.sprites && data.sprites.front_default
-    });
+    };
+
+    associatedPokemon.push(pokemon);
     renderPokemonChips();
+
+    await loadExistingPokemonMapIfAvailable(pokemon);
+
     pokemonAddStatus.textContent = '';
     pokedexIdInput.value = '';
     pokedexIdInput.focus();
@@ -2840,56 +3151,93 @@ pokedexIdInput.addEventListener('keydown', e => {
   if (e.key === 'Enter'){ e.preventDefault(); addPokemonBtn.click(); }
 });
 
-// --- Step 3: save the GIF URL + associated Pokémon IDs (can be empty) to your backend/database ---
+// --- Step 3: save the Cloudinary map URL + Pokémon in public.pokemon_maps ---
 saveVariantBtn.onclick = async () => {
+  saveCachedConfig();
   const dbEndpoint = dbEndpointInput.value.trim();
+  const mapNameEl = document.getElementById('mapNameInput');
+  const mapName = (mapNameEl?.value || currentBasePreset?.name || '').trim();
+  const mapUrl = gifAsset?.secureUrl;
+
   variantStatus.textContent = '';
   variantStatus.className = 'status';
 
-  if (!gifAsset){
-    variantStatus.textContent = 'Primero genera o selecciona un GIF.';
+  if (!gifAsset || !mapUrl){
+    variantStatus.textContent = 'Primero genera o selecciona un GIF subido a Cloudinary.';
     variantStatus.className = 'status error';
     return;
   }
+
+  if (!mapName){
+    variantStatus.textContent = 'Indica el nombre del mapa antes de guardar.';
+    variantStatus.className = 'status error';
+    mapNameEl?.focus();
+    return;
+  }
+
   if (!dbEndpoint){
     variantStatus.textContent = 'Falta el endpoint de tu backend.';
     variantStatus.className = 'status error';
     return;
   }
 
-  const payload = {
-    gifUrl: gifAsset.secureUrl,
-    publicId: gifAsset.publicId,
-    width: gifAsset.width,
-    height: gifAsset.height,
-    pokemonIds: associatedPokemon.map(p => p.id),
-    createdAt: new Date().toISOString()
-  };
+  if (associatedPokemon.length === 0){
+    variantStatus.textContent = 'Debes asociar al menos un Pokémon antes de guardar.';
+    variantStatus.className = 'status error';
+    pokedexIdInput?.focus();
+    return;
+  }
 
   saveVariantBtn.disabled = true;
-  variantStatus.textContent = 'Guardando…';
+  variantStatus.textContent = 'Guardando Pokémon…';
+
   try {
-    const res = await fetch(dbEndpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    if (!res.ok) throw new Error('El backend respondió con error ' + res.status);
-    variantStatus.textContent = associatedPokemon.length
-      ? 'GIF + ' + associatedPokemon.length + ' Pokémon guardados ✓'
-      : 'GIF guardado sin Pokémon (puedes volver luego a añadirlos) ✓';
+    const savedRecords = [];
+
+    for (const pokemon of associatedPokemon){
+      const payload = {
+        pokemon_id: pokemon.id,
+        map_name: mapName,
+        map_url: mapUrl
+      };
+
+      const response = await fetch(dbEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok){
+        const body = await response.text().catch(() => '');
+        throw new Error(
+          `Error guardando #${pokemon.id} ${pokemon.name}: ${response.status}` +
+          (body ? ` — ${body}` : '')
+        );
+      }
+
+      savedRecords.push(payload);
+    }
+
+    variantStatus.textContent =
+      `${savedRecords.length} Pokémon guardados correctamente ✓`;
     variantStatus.className = 'status ok';
 
-    // Keep the session gallery entry in sync with what was just saved
-    const entry = sessionGifs.find(e => e.publicId === gifAsset.publicId);
-    if (entry) entry.pokemonIds = associatedPokemon.map(p => p.id);
+    const entry = sessionGifs.find(
+      item => item.publicId === gifAsset.publicId
+    );
+    if (entry){
+      entry.pokemonIds = associatedPokemon.map(p => p.id);
+    }
+
     renderGifGallery();
-  } catch (err){
-    console.error(err);
-    variantStatus.textContent = 'Error: ' + err.message;
+
+  } catch (error){
+    console.error(error);
+    variantStatus.textContent = 'Error: ' + error.message;
     variantStatus.className = 'status error';
   } finally {
-    saveVariantBtn.disabled = false;
+    saveVariantBtn.disabled =
+      !gifAsset || associatedPokemon.length === 0;
   }
 };
 </script>
