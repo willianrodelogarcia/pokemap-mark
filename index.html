@@ -1433,7 +1433,7 @@ function renderBaseImageGallery(){
 
 function showMapSelector(){
 
-  dropzone.style.display = 'none';
+  dropzone.style.display = 'flex';
   canvasHolder.style.display = 'none';
   toolbar.style.display = 'none';
   hint.style.display = 'none';
@@ -1444,6 +1444,57 @@ function showMapSelector(){
   pokedexPanel.style.display = 'block';
   renderBaseImageGallery();
 }
+
+function loadLocalImage(file){
+  if (!file) return;
+
+  if (!file.type.startsWith('image/')){
+    showBaseImageError('El archivo seleccionado no es una imagen válida.');
+    return;
+  }
+
+  currentBasePreset = null;
+  showBaseImageLoading(file.name);
+
+  const objectUrl = URL.createObjectURL(file);
+  const image = new Image();
+
+  image.onload = () => {
+    URL.revokeObjectURL(objectUrl);
+    setupCanvas(image);
+  };
+
+  image.onerror = () => {
+    URL.revokeObjectURL(objectUrl);
+    showBaseImageError('No se pudo leer la imagen seleccionada.');
+  };
+
+  image.src = objectUrl;
+}
+
+dropzone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', event => {
+  loadLocalImage(event.target.files[0]);
+  event.target.value = '';
+});
+
+['dragenter', 'dragover'].forEach(eventName => {
+  dropzone.addEventListener(eventName, event => {
+    event.preventDefault();
+    dropzone.classList.add('drag');
+  });
+});
+
+['dragleave', 'drop'].forEach(eventName => {
+  dropzone.addEventListener(eventName, event => {
+    event.preventDefault();
+    dropzone.classList.remove('drag');
+  });
+});
+
+dropzone.addEventListener('drop', event => {
+  loadLocalImage(event.dataTransfer.files[0]);
+});
 
 // Load the list from mapas-base.json. If it can't be reached (e.g. opening the
 // HTML directly from disk without a server), the gallery just stays empty and
