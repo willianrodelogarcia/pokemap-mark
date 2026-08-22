@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "node --watch --env-file=.env index.js",
-    "start": "node --env-file=.env index.js",
+    "start": "node index.js",
     "sync:pokemon": "node --env-file=.env scripts/sync-pokemon.js"
   },
   "keywords": [],
