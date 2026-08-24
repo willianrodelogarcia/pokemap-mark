@@ -1,4 +1,8 @@
 const { pokemonService } = require('../services');
+const {
+  parseEvolutionChain,
+  flattenEvolutionChain,
+} = require('../utils/evolutionParser');
 
 const getPokemon = async (req, res) => {
   const result = await pokemonService.getPokemonData();
@@ -69,6 +73,56 @@ const getPokemonMapbyDexNumber = async (req, res) => {
   }
 };
 
+const getPokemonEvolutionChain = async (req, res, next) => {
+  try {
+    const { pokemon } = req.params;
+    const { format } = req.query;
+
+    if (!pokemon) {
+      return res
+        .status(400)
+        .json({ error: 'Debes indicar el nombre o id del Pokémon' });
+    }
+
+    const species = await pokemonService.getPokemonSpecies(pokemon);
+    const rawChain = await pokemonService.getEvolutionChainByUrl(
+      species.evolution_chain.url,
+    );
+    const evolutionTree = parseEvolutionChain(rawChain);
+
+    const responseBody = {
+      requestedPokemon: pokemon,
+      chainId: rawChain.id,
+      isBaby: species.is_baby,
+      evolvesFromSpecies: species.evolves_from_species
+        ? species.evolves_from_species.name
+        : null,
+    };
+
+    if (format === 'flat') {
+      responseBody.evolutions = flattenEvolutionChain(evolutionTree);
+    } else {
+      responseBody.evolutionChain = evolutionTree;
+    }
+
+    return res.status(200).json(responseBody);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const getAllEvolutionChainDb = async (req, res) => {
+  const { dexNumber } = req.params;
+  try {
+    const result = await pokemonService.getAllEvolutionChainDb(
+      parseInt(dexNumber),
+    );
+    res.status(200).json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   getPokemon,
   createPokemonDb,
@@ -77,4 +131,6 @@ module.exports = {
   syncPokemonDb,
   getAllPokemonMap,
   getPokemonMapbyDexNumber,
+  getPokemonEvolutionChain,
+  getAllEvolutionChainDb,
 };

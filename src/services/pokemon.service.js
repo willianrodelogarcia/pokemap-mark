@@ -1,4 +1,5 @@
 const { pokemonRepository } = require('../repositories');
+const { buildChain } = require('../utils/evolutionParser');
 
 const getPokemonData = async () => {
   const result = await pokemonRepository.getPokemonApi();
@@ -100,6 +101,30 @@ const getPokemonMapByDexNumber = async (dexNumber, mapName) => {
   return result;
 };
 
+const getPokemonSpecies = async pokemon => {
+  const result = await pokemonRepository.getPokemonSpecies(pokemon);
+  return result;
+};
+
+const getEvolutionChainByUrl = async url => {
+  const result = await pokemonRepository.getEvolutionChainByUrl(url);
+  return result;
+};
+
+const getAllEvolutionChainDb = async dexNumber => {
+  const result = await pokemonRepository.getAllEvolutionChainDb(dexNumber);
+  let rootId = dexNumber;
+  let parentRow = result.find(e => e.evolves_to_id === rootId);
+  while (parentRow) {
+    rootId = parentRow.pokemon_id;
+    parentRow = result.find(e => e.evolves_to_id === rootId);
+  }
+
+  const chain = buildChain(result, rootId);
+
+  return chain;
+};
+
 module.exports = {
   getPokemonData,
   createPokemonDb,
@@ -108,4 +133,7 @@ module.exports = {
   syncPokemonDb,
   getAllPokemonMap,
   getPokemonMapByDexNumber,
+  getPokemonSpecies,
+  getEvolutionChainByUrl,
+  getAllEvolutionChainDb,
 };

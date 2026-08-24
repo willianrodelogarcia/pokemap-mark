@@ -164,6 +164,25 @@ const getPokemonMapByDexNumber = async (dexNumber, mapName) => {
   return data;
 };
 
+const getPokemonSpecies = async nameOrId => {
+  const url = getPokemonApiUrl();
+  const normalized = String(nameOrId).toLowerCase().trim();
+
+  try {
+    const { data } = await axios.get(`${url}-species/${normalized}`);
+    return data;
+  } catch (error) {
+    if (error.response && error.response.status === 404) {
+      const notFoundError = new Error(
+        `No se encontró el Pokémon "${nameOrId}"`,
+      );
+      notFoundError.statusCode = 404;
+      throw notFoundError;
+    }
+    throw error;
+  }
+};
+
 module.exports = {
   getPokemonApi,
   getPokemonApiPage,
@@ -174,4 +193,5 @@ module.exports = {
   getPokemonDbByDexNumber,
   getAllPokemonMap,
   getPokemonMapByDexNumber,
+  getPokemonSpecies,
 };

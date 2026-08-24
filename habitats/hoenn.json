@@ -1,0 +1,68 @@
+{
+  "region": "Hoenn",
+  "versions": [
+    "ruby",
+    "zafiro",
+    "esmeralda"
+  ],
+  "common": [
+    "Absol",
+    "Baltoy",
+    "Barboach",
+    "Cacnea",
+    "Carvanha",
+    "Corphish",
+    "Electrike",
+    "Geodude",
+    "Gloom",
+    "Goldeen",
+    "Gulpin",
+    "Horsea",
+    "Illumise",
+    "Jigglypuff",
+    "Kecleon",
+    "Linoone",
+    "Magikarp",
+    "Manectric",
+    "Marill",
+    "Minun",
+    "Nincada",
+    "Numel",
+    "Oddish",
+    "Pelipper",
+    "Plusle",
+    "Poochyena",
+    "Ralts",
+    "Sandshrew",
+    "Sharpedo",
+    "Skarmory",
+    "Skitty",
+    "Spinda",
+    "Surskit",
+    "Swablu",
+    "Swellow",
+    "Taillow",
+    "Tentacool",
+    "Trapinch",
+    "Tropius",
+    "Volbeat",
+    "Wailmer",
+    "Wailord",
+    "Whismur",
+    "Wingull",
+    "Wurmple",
+    "Zigzagoon"
+  ],
+  "exclusiveByVersion": {
+    "ruby": [
+      "Duskull",
+      "Zangoose"
+    ],
+    "zafiro": [],
+    "esmeralda": [
+      "Abra",
+      "Mightyena",
+      "Slugma"
+    ]
+  }
+}

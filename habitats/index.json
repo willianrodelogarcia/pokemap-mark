@@ -1,0 +1,19 @@
+{
+  "region": "Pokemon",
+  "sources": [
+    {
+      "file": "habitats/kanto.json",
+      "region": "Kanto",
+      "versionGroup": "FireRed/LeafGreen"
+    },
+    {
+      "file": "habitats/hoenn.json",
+      "region": "Hoenn",
+      "versionGroup": "Hoenn",
+      "structure": {
+        "common": "Pokémon presentes en las tres versiones",
+        "exclusiveByVersion": "Pokémon exclusivos de cada versión"
+      }
+    }
+  ]
+}

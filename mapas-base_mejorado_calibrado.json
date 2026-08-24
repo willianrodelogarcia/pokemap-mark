@@ -5,6 +5,11 @@
     "region": "Kanto"
   },
   {
+    "name": "Mapa de Hoenn",
+    "url": "https://res.cloudinary.com/dxd3ct4ss/image/upload/v1787428639/mapas/pokemonRZE/base/v9awtbxtievpwvxllw3x.png",
+    "region": "Hoenn"
+  },
+  {
     "name": "Mapa de Isla Prima, Secunda y Tera",
     "url": "https://res.cloudinary.com/dxd3ct4ss/image/upload/v1786770369/mapas/rojoFuego/base/v4mqtkfa9gldjmtcbvm3.png",
     "region": "Islas Sete 1–3",

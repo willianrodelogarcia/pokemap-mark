@@ -23,6 +23,21 @@ CREATE TABLE pokemon_maps (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+create table evolutions (
+  id serial primary key,
+  evolution_chain_id integer not null,
+  from_pokemon_id integer references pokemon(id),   -- null si es la forma base
+  to_pokemon_id integer not null references pokemon(id),
+  stage integer not null,
+  methods jsonb not null default '[]',               -- array de strings, ej: ["Subir al nivel 16"]
+  created_at timestamptz default now(),
+  unique (from_pokemon_id, to_pokemon_id)
+);
+
+create index idx_evolutions_chain on evolutions(evolution_chain_id);
+create index idx_evolutions_from on evolutions(from_pokemon_id);
+create index idx_evolutions_to on evolutions(to_pokemon_id);
+
 
 CREATE INDEX idx_mapas_pokemon_id
     ON pokemon_maps(pokemon_id);

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Marcador de rutas</title>
+<title>Marcador de rutas — Pokémon por versión</title>
 <style>
   :root{
     --ink:#2b2420;
@@ -689,14 +689,14 @@
 
     <div class="pokemon-version-sections" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-top:12px;">
       <div class="pokedex-islands" style="margin:0;">
-        <h3 style="margin:0 0 5px;">Pokémon en ambas versiones</h3>
-        <p class="hint" style="margin-top:0;">Pokémon que aparecen tanto en FireRed como en LeafGreen.</p>
+        <h3 id="pokemonBothTitle" style="margin:0 0 5px;">Pokémon comunes / compartidos</h3>
+        <p id="pokemonBothHint" class="hint" style="margin-top:0;">Pokémon que aparecen en dos o más versiones de la región seleccionada.</p>
         <select id="csvPokemonBothSelect" style="width:100%;"></select>
       </div>
 
       <div class="pokedex-islands" style="margin:0;">
-        <h3 style="margin:0 0 5px;">Pokémon exclusivos por versión</h3>
-        <p class="hint" style="margin-top:0;">Solo se muestran los Pokémon que pertenecen exclusivamente a una versión.</p>
+        <h3 id="pokemonExclusiveTitle" style="margin:0 0 5px;">Pokémon exclusivos por versión</h3>
+        <p id="pokemonExclusiveHint" class="hint" style="margin-top:0;">Pokémon que solo aparecen en una versión específica.</p>
         <select id="csvPokemonExclusiveSelect" style="width:100%;"></select>
       </div>
     </div>
@@ -1144,7 +1144,7 @@ let pokedexPokemon = [];
 function normalizePokedexText(value){
   return String(value || '')
     .normalize('NFD')
-    .replace(/[\\u0300-\\u036f]/g, '')
+    .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .trim();
 }
@@ -1180,7 +1180,7 @@ function renderPokedex(){
         data-pokedex-id="${p.id}"
         aria-pressed="${isSelected}">
         <img
-          src="${p.pokemon_sprite_gif || p.pokemon_sprite || ''}"
+          src="${p.pokemon_sprite || ''}"
           onerror="this.onerror=null;this.src='${p.pokemon_sprite || ''}'"
           alt="${p.name}"
           loading="lazy">
@@ -1359,6 +1359,7 @@ let currentBasePreset = null;
 function getPresetRegion(preset){
   if (preset.region) return preset.region;
   const n = String(preset.name || '').toLowerCase();
+  if (n.includes('hoenn') || n.includes('rubi') || n.includes('rubí') || n.includes('zafiro') || n.includes('esmeralda')) return 'Hoenn';
   if (n.includes('kanto')) return 'Kanto';
   if (n.includes('prima')) return 'Islas Sete 1–3';
   if (n.includes('quarta')) return 'Islas Sete 4–5 + Ombligo';
@@ -1730,7 +1731,7 @@ const SEVII_MARKERS = {
   ]
 };
 
-// --- Known habitat areas from JSON (FireRed + LeafGreen) ---
+// --- Hábitats cargados desde JSON (Kanto + Hoenn + Islas Sete) ---
 const csvVersionSelect = document.getElementById('csvVersionSelect');
 const csvPokemonSelect = document.getElementById('csvPokemonSelect');
 const csvPokemonBothSelect = document.getElementById('csvPokemonBothSelect');
@@ -1740,12 +1741,174 @@ const jsonCoordsStatus = document.getElementById('jsonCoordsStatus');
 
 let coordRecords = [];
 const geometryByLocation = {};
-let seviiGeometryLoaded = false; // JSON records in the supplied 960x640 map space
-// Region-map areas use section CENTER coordinates; special habitat anchors
-// retain their source marker coordinates.
+let seviiGeometryLoaded = false;
 
+/*
+ * Cada archivo de hábitats se carga con metadatos de región. Esto permite
+ * mantener los JSON fuera del index y, al mismo tiempo, evitar mezclar
+ * Kanto con Hoenn cuando se selecciona un mapa base.
+ *
+ * Hoenn se busca en varios nombres/rutas para que el index sea compatible
+ * tanto con una carpeta habitats/hoenn/ como con una carpeta habitats/ plana.
+ */
+// Hoenn geometry pipeline v8: per-version ROM-derived datasets + polygon-first rendering.
+const HABITAT_SOURCES = [
+  {
+    region: 'Kanto',
+    versionGroup: 'Kanto',
+    paths: ['./habitats/kanto.json']
+  },
+  {
+    region: 'Hoenn',
+    versionGroup: 'Hoenn',
+    paths: ['./habitats/hoenn.json']
+  }
+];
 
+async function fetchJsonSources(paths, loadAll = false){
+  const results = [];
 
+  for (const path of paths){
+    try{
+      const res = await fetch(path, { cache: 'no-store' });
+      if (!res.ok) continue;
+
+      const data = await res.json();
+      const valid =
+        (Array.isArray(data) && data.length) ||
+        (data && Array.isArray(data.pokemon) && data.pokemon.length) ||
+        (data && Array.isArray(data.all) && data.all.length) ||
+        (data && Array.isArray(data.common) && data.common.length) ||
+        (data && data.exclusiveByVersion && typeof data.exclusiveByVersion === 'object');
+
+      if (valid){
+        results.push({ path, data });
+        if (!loadAll) break;
+      }
+    }catch(_){}
+  }
+
+  return results;
+}
+
+function sourceVersionsForPokemon(source, name){
+  const versions = Array.isArray(source.versions) ? source.versions : [];
+  const common = new Set(source.common || []);
+  if (common.has(name)) return versions;
+
+  return versions.filter(version =>
+    Array.isArray(source.exclusiveByVersion?.[version]) &&
+    source.exclusiveByVersion[version].includes(name)
+  );
+}
+
+async function loadHabitatSources(){
+  const loaded = [];
+
+  for (const source of HABITAT_SOURCES){
+    const results = await fetchJsonSources(source.paths, false);
+
+    for (const result of results){
+      const raw = result.data;
+      let records = [];
+
+      if (source.region === 'Hoenn' && raw && !Array.isArray(raw)){
+        const versions = Array.isArray(raw.versions)
+          ? raw.versions
+          : ['ruby','zafiro','esmeralda'];
+
+        const common = Array.isArray(raw.common) ? raw.common : [];
+
+        // Common Pokémon: one logical record per game version.
+        for (const name of common){
+          for (const version of versions){
+            records.push({
+              pokemon: String(name),
+              version: String(version),
+              region: 'Hoenn',
+              exclusiveVersion: null
+            });
+          }
+        }
+
+        // Exclusives: only their actual game version.
+        for (const version of versions){
+          const names = Array.isArray(raw.exclusiveByVersion?.[version])
+            ? raw.exclusiveByVersion[version]
+            : [];
+
+          for (const name of names){
+            records.push({
+              pokemon: String(name),
+              version: String(version),
+              region: 'Hoenn',
+              exclusiveVersion: String(version)
+            });
+          }
+        }
+      } else if (Array.isArray(raw)){
+        // Kanto: preserve every original location record, including
+        // FireRed/LeafGreen and all coordinates.
+        records = raw;
+      } else if (raw && Array.isArray(raw.pokemon)){
+        records = raw.pokemon.map(name => ({
+          pokemon: String(name),
+          version: raw.version || source.versionGroup
+        }));
+      }
+
+      const normalized = records
+        .filter(r => r && typeof r === 'object')
+        .map(r => ({
+          ...r,
+          region: r.region || source.region,
+          versionGroup: r.versionGroup || source.versionGroup
+        }));
+
+      if (normalized.length){
+        loaded.push({
+          region: source.region,
+          path: result.path,
+          records: normalized
+        });
+      }
+    }
+  }
+
+  const seen = new Set();
+  coordRecords = loaded.flatMap(item => item.records).filter(record => {
+    const key = [
+      record.region,
+      record.version,
+      record.pokemon,
+      record.pokemonId,
+      record.location,
+      record.x,
+      record.y,
+      record.width,
+      record.height,
+      record.left,
+      record.top,
+      record.exclusiveVersion
+    ].join('|');
+
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  populateCoordSelects();
+
+  const summary = loaded.length
+    ? loaded.map(item => `${item.region}: ${item.records.length}`).join(' · ')
+    : 'No se encontraron JSON de hábitats.';
+
+  jsonCoordsStatus.textContent = coordRecords.length
+    ? `${coordRecords.length} registros cargados · ${summary}`
+    : 'No se encontraron JSON de hábitats.';
+
+  jsonCoordsStatus.className = coordRecords.length ? 'status ok' : 'status error';
+}
 async function loadSeviiGeometry(){
   try{
     const res = await fetch('./sevii_map_calibration_960x640.json?v=2');
@@ -1801,10 +1964,22 @@ function isSeviiMapActive(){
   return getActiveSeviiGroups().length > 0;
 }
 
+function getActiveHabitatRegion(){
+  if (isSeviiMapActive()) return 'Kanto';
+  if (!currentBasePreset) return 'Kanto';
+
+  const region = getPresetRegion(currentBasePreset);
+  if (region === 'Hoenn') return 'Hoenn';
+  return 'Kanto';
+}
+
 function setSeviiSelectorsEnabled(enabled){
-  [csvVersionSelect, csvPokemonSelect, csvLocationSelect].forEach(el => {
+  [csvVersionSelect, csvPokemonSelect].forEach(el => {
     el.disabled = !enabled;
   });
+
+  const region = getActiveHabitatRegion();
+  csvLocationSelect.disabled = region === 'Hoenn' ? true : !enabled;
 
   const hint = document.getElementById('seviiSelectionHint');
   if (hint){
@@ -1812,9 +1987,6 @@ function setSeviiSelectorsEnabled(enabled){
   }
 }
 
-// On Kanto maps we use ALL Kanto records.
-// On a Sevii map we restrict the selectors to the islands represented
-// by the currently selected base map.
 function getRecordsForCurrentMap(){
   const mapView = getActiveSeviiMapView();
 
@@ -1822,8 +1994,11 @@ function getRecordsForCurrentMap(){
     return coordRecords.filter(r => r.mapView === mapView);
   }
 
-  // Kanto = original records without an island/mapView.
-  return coordRecords.filter(r => r.island == null);
+  const region = getActiveHabitatRegion();
+  return coordRecords.filter(r => {
+    if (r.island != null) return false;
+    return String(r.region || 'Kanto').toLowerCase() === region.toLowerCase();
+  });
 }
 
 function clearSelectorsForNoData(){
@@ -1831,6 +2006,94 @@ function clearSelectorsForNoData(){
   csvPokemonSelect.innerHTML = '<option value="">—</option>';
   csvLocationSelect.innerHTML = '<option value="">—</option>';
   csvLocationSelect.dataset.records = '[]';
+  csvPokemonBothSelect.innerHTML = '<option value="" selected>Seleccione un Pokémon</option>';
+  csvPokemonExclusiveSelect.innerHTML = '<option value="">No hay Pokémon disponibles</option>';
+}
+
+function getPokemonDexNumber(recordOrName){
+  if (recordOrName && typeof recordOrName === 'object'){
+    const direct = Number(recordOrName.pokemonId);
+    if (Number.isFinite(direct) && direct > 0) return direct;
+    return getPokemonDexNumber(recordOrName.pokemon);
+  }
+
+  const name = String(recordOrName || '').trim();
+  if (!name) return Number.MAX_SAFE_INTEGER;
+
+  // Hoenn's single JSON stores names in its common/exclusive lists.
+  // The calibrated habitat dataset supplies the corresponding pokemonId.
+  const staticDex = {"Sandshrew":27,"Jigglypuff":39,"Oddish":43,"Gloom":44,"Machop":66,"Tentacool":72,"Geodude":74,"Horsea":116,"Goldeen":118,"Magikarp":129,"Marill":183,"Skarmory":227,"Poochyena":261,"Zigzagoon":263,"Linoone":264,"Wurmple":265,"Seedot":273,"Nuzleaf":274,"Taillow":276,"Swellow":277,"Wingull":278,"Pelipper":279,"Ralts":280,"Surskit":283,"Nincada":290,"Whismur":293,"Skitty":300,"Electrike":309,"Manectric":310,"Plusle":311,"Minun":312,"Volbeat":313,"Illumise":314,"Roselia":315,"Gulpin":316,"Carvanha":318,"Sharpedo":319,"Wailmer":320,"Wailord":321,"Numel":322,"Spinda":327,"Trapinch":328,"Cacnea":331,"Swablu":333,"Zangoose":335,"Barboach":339,"Corphish":341,"Baltoy":343,"Kecleon":352,"Duskull":355,"Tropius":357,"Absol":359,"Lotad":270,"Lombre":271,"Seviper":336,"Shuppet":353,"Abra":63,"Slugma":218,"Mightyena":262};
+  if (staticDex[name]) return Number(staticDex[name]);
+
+  // Fallback to the application's Pokédex dataset when it is already loaded.
+  const normalizedName = normalizePokedexText(name);
+  const pokemon = Array.isArray(pokedexPokemon)
+    ? pokedexPokemon.find(item =>
+        normalizePokedexText(item.name) === normalizedName
+      )
+    : null;
+
+  const dex = Number(pokemon?.dex_number || pokemon?.id);
+  return Number.isFinite(dex) && dex > 0 ? dex : Number.MAX_SAFE_INTEGER;
+}
+
+function sortPokemonNames(names){
+  return [...new Set(names)]
+    .sort((a,b) => {
+      const da = getPokemonDexNumber(a);
+      const db = getPokemonDexNumber(b);
+      if (da !== db) return da - db;
+      return String(a).localeCompare(String(b));
+    });
+}
+
+function getActiveGameVersions(){
+  const region = getActiveHabitatRegion();
+
+  if (region === 'Hoenn'){
+    return ['ruby', 'zafiro', 'esmeralda'];
+  }
+
+  // Kanto is genuinely version-specific: the JSON records contain
+  // FireRed/LeafGreen on every encounter.
+  return [...new Set(
+    getRecordsForCurrentMap()
+      .map(r => String(r.version || '').trim())
+      .filter(Boolean)
+  )].sort((a,b) => a.localeCompare(b));
+}
+
+function getSelectedGameVersion(){
+  const region = getActiveHabitatRegion();
+  if (region === 'Hoenn'){
+    return String(csvVersionSelect.value || 'ruby').trim().toLowerCase();
+  }
+  return String(csvVersionSelect.value || '').trim();
+}
+
+function setPokemonListMode(){
+  const region = getActiveHabitatRegion();
+  const bothTitle = document.getElementById('pokemonBothTitle');
+  const bothHint = document.getElementById('pokemonBothHint');
+  const exclusiveTitle = document.getElementById('pokemonExclusiveTitle');
+  const exclusiveHint = document.getElementById('pokemonExclusiveHint');
+
+  if (region === 'Kanto'){
+    if (bothTitle) bothTitle.textContent = 'Pokémon de la versión';
+    if (bothHint) bothHint.textContent =
+      'Solo Pokémon disponibles en la versión seleccionada.';
+    if (exclusiveTitle) exclusiveTitle.textContent = 'Exclusivos por versión';
+    if (exclusiveHint) exclusiveHint.textContent =
+      'No aplica a Kanto: la lista anterior ya está filtrada por juego.';
+    return;
+  }
+
+  if (bothTitle) bothTitle.textContent = 'Pokémon comunes / compartidos';
+  if (bothHint) bothHint.textContent =
+    'Pokémon que aparecen en las tres versiones de Hoenn.';
+  if (exclusiveTitle) exclusiveTitle.textContent = 'Pokémon exclusivos por versión';
+  if (exclusiveHint) exclusiveHint.textContent =
+    'Exclusivos correspondientes al juego seleccionado.';
 }
 
 function populateCoordSelects(){
@@ -1843,12 +2106,23 @@ function populateCoordSelects(){
     return;
   }
 
-  const versions = [...new Set(records.map(r => r.version))].sort();
+  const versions = getActiveGameVersions();
 
-  csvVersionSelect.innerHTML = versions.map(v =>
-    `<option value="${v}">${v}</option>`
-  ).join('');
+  csvVersionSelect.innerHTML = versions.map(v => {
+    const label = {
+      ruby: 'Ruby',
+      zafiro: 'Zafiro',
+      esmeralda: 'Esmeralda'
+    }[String(v).toLowerCase()] || v;
 
+    return `<option value="${escapeHtml(v)}">${escapeHtml(label)}</option>`;
+  }).join('');
+
+  if (versions.length){
+    csvVersionSelect.value = versions[0];
+  }
+
+  setPokemonListMode();
   populatePokemonSelect();
 }
 
@@ -1863,11 +2137,7 @@ function clearMarksOnPokemonChange(force = false){
       String(window._lastHabitatPokemonId) !== String(newPokemonId)
     ))
   ){
-    // Limpiar SIEMPRE las marcas, tanto en mapas estáticos como animados.
-    // `strokes` contiene las marcas dibujadas por el editor.
     strokes = [];
-
-    // Limpiar cualquier estado de ubicación/hábitat acumulado.
     selectedHabitatLocations = [];
     selectedRecord = null;
 
@@ -1877,8 +2147,6 @@ function clearMarksOnPokemonChange(force = false){
     pokedexIdInput.value = '';
     mapNameInput.value = '';
 
-    // Reiniciar el mapa/GIF cargado para evitar conservar visualmente
-    // la selección anterior.
     existingPokemonMap = null;
     gifAsset = null;
     uploadedMapUrl = null;
@@ -1901,12 +2169,8 @@ function clearMarksOnPokemonChange(force = false){
     setExistingMapStatus('');
     lockMapUploadControls(false);
 
-    // No conservar la asociación del Pokémon anterior.
     associatedPokemon = [];
     renderPokemonChips();
-
-    // Importante: redrawStrokes() se ejecuta independientemente de si el
-    // mapa actual es estático o animado.
     redrawStrokes();
 
     coordsStatus.textContent =
@@ -1919,120 +2183,235 @@ function clearMarksOnPokemonChange(force = false){
 
 function populatePokemonSelect(){
   const records = getRecordsForCurrentMap();
-  const versions = [...new Set(records.map(r => r.version))];
-  const fireRed = new Map();
-  const leafGreen = new Map();
+  const region = getActiveHabitatRegion();
+  const selectedVersion = getSelectedGameVersion();
+
+  if (region === 'Kanto'){
+    // CRITICAL: Kanto is filtered by the actual JSON record version.
+    // FireRed and LeafGreen therefore never share the same list.
+    const versionRecords = records.filter(r =>
+      String(r.version || '').trim().toLowerCase() ===
+      selectedVersion.toLowerCase()
+    );
+
+    const names = sortPokemonNames(
+      versionRecords.map(r => String(r.pokemon || '').trim()).filter(Boolean)
+    );
+
+    csvPokemonBothSelect.innerHTML = names.length
+      ? [
+          '<option value="" selected disabled>Seleccione un Pokémon</option>',
+          ...names.map(name =>
+            `<option value="${escapeHtml(name)}">#${String(getPokemonDexNumber(name)).padStart(3,'0')} ${escapeHtml(name)}</option>`
+          )
+        ].join('')
+      : '<option value="" selected disabled>Seleccione un Pokémon</option>';
+
+    csvPokemonExclusiveSelect.innerHTML =
+      '<option value="">No aplica para Kanto</option>';
+    csvPokemonSelect.innerHTML =
+      '<option value="">Selecciona un Pokémon arriba</option>';
+    csvPokemonSelect.value = '';
+    csvPokemonSelect.style.display = 'none';
+    populateLocationSelect();
+    return;
+  }
+
+  // Hoenn: common list is unique and shared by all three games.
+  // Exclusive list is restricted to the selected game.
+  const byPokemon = new Map();
 
   records.forEach(r => {
-    if (r.version === 'FireRed' && !fireRed.has(r.pokemonId)) fireRed.set(r.pokemonId, r.pokemon);
-    if (r.version === 'LeafGreen' && !leafGreen.has(r.pokemonId)) leafGreen.set(r.pokemonId, r.pokemon);
+    const name = String(r.pokemon || '').trim();
+    if (!name) return;
+
+    if (!byPokemon.has(name)){
+      byPokemon.set(name, {
+        name,
+        exclusiveVersions: new Set()
+      });
+    }
+
+    if (r.exclusiveVersion){
+      byPokemon.get(name).exclusiveVersions.add(
+        String(r.exclusiveVersion).trim().toLowerCase()
+      );
+    }
   });
 
-  const bothIds = [...fireRed.keys()].filter(id => leafGreen.has(id)).sort((a,b) => a-b);
-  const fireRedOnly = [...fireRed.keys()].filter(id => !leafGreen.has(id)).sort((a,b) => a-b);
-  const leafGreenOnly = [...leafGreen.keys()].filter(id => !fireRed.has(id)).sort((a,b) => a-b);
+  const commonNames = sortPokemonNames(
+    [...byPokemon.values()]
+      .filter(item => item.exclusiveVersions.size === 0)
+      .map(item => item.name)
+  );
 
-  csvPokemonBothSelect.innerHTML = bothIds.length
-    ? bothIds.map(id => `<option value="${id}">#${String(id).padStart(3,'0')} ${fireRed.get(id)}</option>`).join('')
-    : '<option value="">No hay Pokémon comunes</option>';
+  const exclusiveNames = sortPokemonNames(
+    [...byPokemon.values()]
+      .filter(item => item.exclusiveVersions.has(selectedVersion))
+      .map(item => item.name)
+  );
 
-  csvPokemonExclusiveSelect.innerHTML = [
-    '<option value="">Selecciona un exclusivo</option>',
-    fireRedOnly.length ? '<optgroup label="FireRed">' + fireRedOnly.map(id => `<option value="FR:${id}">#${String(id).padStart(3,'0')} ${fireRed.get(id)}</option>`).join('') + '</optgroup>' : '',
-    leafGreenOnly.length ? '<optgroup label="LeafGreen">' + leafGreenOnly.map(id => `<option value="LG:${id}">#${String(id).padStart(3,'0')} ${leafGreen.get(id)}</option>`).join('') + '</optgroup>' : ''
-  ].join('');
+  csvPokemonBothSelect.innerHTML = commonNames.length
+    ? [
+        '<option value="" selected disabled>Seleccione un Pokémon</option>',
+        ...commonNames.map(name =>
+          `<option value="${escapeHtml(name)}">#${String(getPokemonDexNumber(name)).padStart(3,'0')} ${escapeHtml(name)}</option>`
+        )
+      ].join('')
+    : '<option value="" selected disabled>Seleccione un Pokémon</option>';
 
-  // Mantener un select interno con el Pokémon activo para reutilizar toda la lógica existente.
-  csvPokemonSelect.innerHTML = '<option value="">Selecciona un Pokémon arriba</option>';
+  const versionLabel = {
+    ruby: 'Ruby',
+    zafiro: 'Zafiro',
+    esmeralda: 'Esmeralda'
+  }[selectedVersion] || selectedVersion;
+
+  csvPokemonExclusiveSelect.innerHTML = exclusiveNames.length
+    ? [
+        `<option value="">Exclusivos de ${escapeHtml(versionLabel)}</option>`,
+        ...exclusiveNames.map(name =>
+          `<option value="${escapeHtml(selectedVersion)}:${escapeHtml(name)}">#${String(getPokemonDexNumber(name)).padStart(3,'0')} ${escapeHtml(name)}</option>`
+        )
+      ].join('')
+    : `<option value="">No hay exclusivos de ${escapeHtml(versionLabel)}</option>`;
+
+  csvPokemonSelect.innerHTML =
+    '<option value="">Selecciona un Pokémon arriba</option>';
   csvPokemonSelect.value = '';
   csvPokemonSelect.style.display = 'none';
   populateLocationSelect();
 }
+function setSelectedPokemon(name, version){
+  if (!name) return;
 
-function setSelectedPokemon(id, version){
-  if (!id) return;
-  // Cambiar desde las listas “Ambos”/“Exclusivos” también debe limpiar
-  // las marcas del Pokémon que se estaba editando.
-  clearMarksOnPokemonChange(true);
-  csvVersionSelect.value = version;
-  csvPokemonSelect.innerHTML = `<option value="${id}">#${String(id).padStart(3,'0')} Pokémon</option>`;
-  csvPokemonSelect.value = String(id);
+  const records = getRecordsForCurrentMap();
+  const region = getActiveHabitatRegion();
+  const normalizedName = String(name).toLowerCase();
+
+  let matching = records.filter(r =>
+    String(r.pokemon || '').toLowerCase() === normalizedName
+  );
+
+  if (region === 'Kanto'){
+    matching = matching.filter(r =>
+      String(r.version || '').trim().toLowerCase() ===
+      String(version || '').trim().toLowerCase()
+    );
+  } else if (version){
+    const exclusiveMatching = matching.filter(r =>
+      String(r.exclusiveVersion || '').trim().toLowerCase() ===
+      String(version || '').trim().toLowerCase()
+    );
+
+    if (exclusiveMatching.length){
+      matching = exclusiveMatching;
+    }
+  }
+
+  if (!matching.length) return;
+
+  const record = matching[0];
+
+  csvPokemonSelect.innerHTML =
+    `<option value="${escapeHtml(record.pokemon)}">#${String(getPokemonDexNumber(record)).padStart(3,'0')} ${escapeHtml(record.pokemon)}</option>`;
+  csvPokemonSelect.value = record.pokemon;
+
+  fillPokemonIdFields(record.pokemon);
   populateLocationSelect();
+}
+function fillPokemonIdFields(name){
+  const normalizedName = normalizePokedexText(name);
+  const pokemon = pokedexPokemon.find(item =>
+    normalizePokedexText(item.name) === normalizedName
+  );
+
+  if (!pokemon) return;
+
+  coordPokemonId.value = pokemon.dex_number || pokemon.id;
+  pokedexIdInput.value = pokemon.dex_number || pokemon.id;
 }
 
 csvPokemonBothSelect.addEventListener('change', () => {
-  const id = Number(csvPokemonBothSelect.value);
-  if (!id) return;
-  setSelectedPokemon(id, csvVersionSelect.value || 'FireRed');
+  const name = csvPokemonBothSelect.value;
+  if (!name) return;
+
+  setSelectedPokemon(
+    name,
+    getSelectedGameVersion()
+  );
+
+  populateLocationSelect();
   csvPokemonExclusiveSelect.value = '';
 });
 
 csvPokemonExclusiveSelect.addEventListener('change', () => {
   const value = csvPokemonExclusiveSelect.value;
   if (!value) return;
-  const [prefix, id] = value.split(':');
-  setSelectedPokemon(Number(id), prefix === 'FR' ? 'FireRed' : 'LeafGreen');
+  const separator = value.indexOf(':');
+  if (separator < 0) return;
+  const version = value.slice(0, separator);
+  const name = value.slice(separator + 1);
+  setSelectedPokemon(name, version);
   csvPokemonBothSelect.value = '';
 });
 
 function populateLocationSelect(){
-  const records = getRecordsForCurrentMap();
-  const version = csvVersionSelect.value;
-  const pokemonId = Number(csvPokemonSelect.value);
+  const select = csvLocationSelect;
+  const field = document.getElementById('locationSelectField');
+  const hint = document.getElementById('hoennManualHint');
+  if (!select) return;
 
-  const locs = records
-    .filter(r => r.version === version && r.pokemonId === pokemonId)
-    .sort((a,b) =>
-      String(a.island || '').localeCompare(String(b.island || '')) ||
-      String(a.location).localeCompare(String(b.location))
-    );
+  const region = getActiveHabitatRegion();
 
-  if (!locs.length){
-    csvLocationSelect.innerHTML =
-      '<option value="">No hay ubicaciones para este Pokémon</option>';
-    csvLocationSelect.dataset.records = '[]';
+  if (region === 'Hoenn'){
+    if (field) field.style.display = 'none';
+    if (hint) hint.style.display = 'block';
+    select.innerHTML = '<option value="">Ubicación manual</option>';
+    select.dataset.records = '[]';
+    select.disabled = true;
+    selectedHabitatLocations = [];
     return;
   }
 
-  // Do not silently choose a location from another island in a composite map.
-  // The user must explicitly choose the exact location.
-  csvLocationSelect.innerHTML =
-    '<option value="">Selecciona una ubicación</option>' +
-    locs.map((r, i) =>
-      `<option value="${i}">
-        ${r.island ? `${r.island.replace('_island','')} · ` : ''}` +
-        `${r.location} · ${r.geometry} · ${r.width}×${r.height}` +
-        `${isSeviiMapActive() && r.coordinateStatus === 'parent_island_anchor'
-          ? ' · área manual' : ''}` +
-      `</option>`
-    ).join('');
+  if (field) field.style.display = '';
+  if (hint) hint.style.display = 'none';
 
-  const enrichedLocs = locs.map(r => {
-    const g = getRecordGeometry(r);
-    return g ? {
-      ...r,
-      geometryStatus: g.status,
-      exactGeometry: g
-    } : r;
+  const pokemon = String(csvPokemonSelect.value || '').trim();
+  const version = String(csvVersionSelect.value || '').trim();
+
+  const matches = getRecordsForCurrentMap().filter(r =>
+    String(r.pokemon || '').toLowerCase() === pokemon.toLowerCase() &&
+    String(r.version || '').toLowerCase() === version.toLowerCase() &&
+    r.location
+  );
+
+  const unique = [];
+  const seen = new Set();
+
+  matches.forEach(record => {
+    const key = [
+      record.location, record.mapView || '', record.island || '',
+      record.x ?? '', record.y ?? '', record.width ?? '', record.height ?? ''
+    ].join('|');
+
+    if (!seen.has(key)){
+      seen.add(key);
+      unique.push(record);
+    }
   });
 
-  csvLocationSelect.dataset.records = JSON.stringify(enrichedLocs);
+  select.innerHTML = '<option value="">Selecciona una ubicación</option>' +
+    unique.map((record,index) =>
+      `<option value="${index}">${escapeHtml(record.location)}</option>`
+    ).join('');
 
-  // Cambiar de Pokémon inicia una nueva lista de ubicaciones.
-  selectedHabitatLocations = [];
-  mapNameInput.value = '';
-  coordPokemonId.value = '';
+  select.dataset.records = JSON.stringify(unique);
+  select.disabled = unique.length === 0;
 
-  // Clear the coordinate fields until the exact location is selected.
-  coordX.value = '';
-  coordY.value = '';
-  coordPokemonId.value = '';
-  jsonCoordsStatus.textContent =
-    `${locs.length} ubicación(es) disponibles para este Pokémon en el mapa actual. ` +
-    `Selecciona una ubicación concreta.`;
-  jsonCoordsStatus.className = 'status';
+  if (!unique.length){
+    select.innerHTML = '<option value="">No hay ubicaciones</option>';
+  }
 }
-
 function fillFromSelectedLocation(){
   const locs = JSON.parse(csvLocationSelect.dataset.records || '[]');
 
@@ -2058,51 +2437,33 @@ function fillFromSelectedLocation(){
   const exactStatus = geomMaster?.canvas960;
 
   jsonCoordsStatus.textContent =
+    `${record.region ? record.region + ' · ' : ''}` +
     `${record.island ? record.island.replace('_island','') + ' · ' : ''}` +
     `${record.location}: ` +
-    `${exactStatus ? `${exactStatus.width}×${exactStatus.height}px · centro (${Math.round(exactStatus.left + exactStatus.width/2)}, ${Math.round(exactStatus.top + exactStatus.height/2)}` : 'geometría manual requerida'}` +
-    `${exactStatus ? ')' : ''}`;
+    `${exactStatus
+      ? `${exactStatus.width}×${exactStatus.height}px · centro (${Math.round(exactStatus.left + exactStatus.width/2)}, ${Math.round(exactStatus.top + exactStatus.height/2)})`
+      : `${record.width || '?'}×${record.height || '?'}px · centro (${record.x ?? '?'}, ${record.y ?? '?'})`}`;
 
   jsonCoordsStatus.className = 'status ok';
 }
 
 csvVersionSelect.addEventListener('change', () => {
   clearMarksOnPokemonChange(true);
+  setPokemonListMode();
   populatePokemonSelect();
+  populateLocationSelect();
 });
 csvPokemonSelect.addEventListener('change', () => {
   clearMarksOnPokemonChange();
+  fillPokemonIdFields(csvPokemonSelect.value);
   populateLocationSelect();
 });
 csvLocationSelect.addEventListener('change', fillFromSelectedLocation);
 
-
-// The definitive habitat data is stored as JSON next to index.html.
-fetch('./rojo_fuego_verde_hoja_habitat_islas_calibrado_por_imagen.json?v=19')
-  .then(res => {
-    if (!res.ok) throw new Error('JSON de hábitat no encontrado');
-    return res.json();
-  })
-  .then(list => {
-    if (!Array.isArray(list) || !list.length)
-      throw new Error('El JSON no contiene registros');
-
-    coordRecords = list;
-    populateCoordSelects();
-
-    jsonCoordsStatus.textContent =
-      `${coordRecords.length} asociaciones de hábitat cargadas desde JSON.`;
-
-    jsonCoordsStatus.className = 'status ok';
-  })
-  .catch(err => {
-    console.error(err);
-
-    jsonCoordsStatus.textContent =
-      'No se pudo cargar el JSON de hábitat. Verifica que esté junto a index.html.';
-
-    jsonCoordsStatus.className = 'status error';
-  });
+// Carga todos los hábitats externos antes de habilitar los selectores.
+// Kanto conserva su JSON actual y Hoenn se toma desde ./habitats/.
+loadHabitatSources();
+loadSeviiGeometry();
 
 // --- Manual coordinates / selected JSON habitat area ---
 const coordX = document.getElementById('coordX');
@@ -2180,19 +2541,41 @@ function getCustomSeviiArea(record){
   return a;
 }
 
-function createHabitatStroke(record){
-  const scaleX = base.width / 960;
-  const scaleY = base.height / 640;
+function getPolygonCentroid(points){
+  if (!Array.isArray(points) || points.length < 3) return null;
+  let area2 = 0, cx = 0, cy = 0;
+  for (let i = 0; i < points.length; i++){
+    const a = points[i];
+    const b = points[(i + 1) % points.length];
+    const cross = Number(a.x) * Number(b.y) - Number(b.x) * Number(a.y);
+    area2 += cross;
+    cx += (Number(a.x) + Number(b.x)) * cross;
+    cy += (Number(a.y) + Number(b.y)) * cross;
+  }
+  if (Math.abs(area2) < 1e-9){
+    const sx = points.reduce((sum,p) => sum + Number(p.x), 0);
+    const sy = points.reduce((sum,p) => sum + Number(p.y), 0);
+    return { x: sx / points.length, y: sy / points.length };
+  }
+  return { x: cx / (3 * area2), y: cy / (3 * area2) };
+}
 
+function createHabitatStroke(record){
   /*
-   * Todas las marcas de hábitat, incluidas las de Islas Sete,
-   * utilizan exactamente el mismo objeto visual.
-   *
-   * La única diferencia es cómo obtenemos la geometría:
-   *   - Islas Sete: geometría calibrada para la imagen actual.
-   *   - Kanto: left/top/width/height del JSON.
-   *   - Fallback 1–3 antiguo: geometría personalizada.
+   * Kanto / Islas Sete usan el sistema 960×640.
+   * Hoenn usa el mapa completo de la PokéNav compuesto a 1536×1024.
+   * Los JSON de Hoenn ya contienen left/top/width/height en 1536×1024.
    */
+  const isHoennRecord =
+    String(record.coordinateSystem || '').toLowerCase().startsWith('hoenn_') ||
+    String(record.geometry || '').toLowerCase().startsWith('hoenn_') ||
+    record.region === 'Hoenn';
+
+  const sourceWidth = isHoennRecord ? 1536 : 960;
+  const sourceHeight = isHoennRecord ? 1024 : 640;
+  const scaleX = base.width / sourceWidth;
+  const scaleY = base.height / sourceHeight;
+
   const buildHabitatStroke = (geometry, geometryName = 'habitat_area') => ({
     type: 'habitat',
     geometry: geometryName,
@@ -2210,18 +2593,114 @@ function createHabitatStroke(record){
     size: 2
   });
 
+  // Polygon/area geometry is the visual source of truth for encounter habitats.
+  // v6: Route 111 Deep Sand is extracted from the original GBA ROM metatile behavior.
+  // IMPORTANT: polygonPoints are visual coordinates in the Hoenn 1536x1024
+  // artwork coordinate system; they are independent from Region Map section
+  // x/y and must NOT be regenerated from section width/height.
+  const habitatPolygonSource = Array.isArray(record.habitatPolygons)
+    ? record.habitatPolygons
+    : null;
+
+  const polygonSource = Array.isArray(record.polygonPoints)
+    ? record.polygonPoints
+    : null;
+
+  if (habitatPolygonSource && habitatPolygonSource.length){
+    const habitatPolygons = habitatPolygonSource
+      .map(poly => Array.isArray(poly) ? poly.map(p => ({
+        x: Number(p.x) * scaleX,
+        y: Number(p.y) * scaleY
+      })).filter(p => Number.isFinite(p.x) && Number.isFinite(p.y)) : [])
+      .filter(poly => poly.length >= 3);
+
+    if (habitatPolygons.length){
+      const all = habitatPolygons.flat();
+      const xs = all.map(p => p.x), ys = all.map(p => p.y);
+      const bboxGeometry = {
+        x: Math.min(...xs) / scaleX,
+        y: Math.min(...ys) / scaleY,
+        width: (Math.max(...xs)-Math.min(...xs))/scaleX,
+        height: (Math.max(...ys)-Math.min(...ys))/scaleY
+      };
+      const stroke = buildHabitatStroke(bboxGeometry, record.geometry || 'rom_method_habitat');
+      const visualCenter = record.visualCenter;
+      if (visualCenter && Number.isFinite(Number(visualCenter.x)) && Number.isFinite(Number(visualCenter.y))){
+        stroke.x = Number(visualCenter.x)*scaleX;
+        stroke.y = Number(visualCenter.y)*scaleY;
+      }
+      return { ...stroke, polygonPoints: [], polygonSource: null, areaPolygons: habitatPolygons, habitatPolygons };
+    }
+  }
+
+  if (polygonSource && polygonSource.length >= 3){
+    const polygonPoints = polygonSource
+      .map(p => ({
+        x: Number(p.x) * scaleX,
+        y: Number(p.y) * scaleY
+      }))
+      .filter(p => Number.isFinite(p.x) && Number.isFinite(p.y));
+
+    if (polygonPoints.length >= 3){
+      const xs = polygonPoints.map(p => p.x);
+      const ys = polygonPoints.map(p => p.y);
+      const minX = Math.min(...xs);
+      const maxX = Math.max(...xs);
+      const minY = Math.min(...ys);
+      const maxY = Math.max(...ys);
+
+      const bboxGeometry = {
+        x: minX / scaleX,
+        y: minY / scaleY,
+        width: (maxX - minX) / scaleX,
+        height: (maxY - minY) / scaleY
+      };
+
+      const stroke = buildHabitatStroke(
+        bboxGeometry,
+        record.geometry || 'hoenn_habitat_polygon'
+      );
+
+      // For Hoenn reference-route polygons, use the centroid extracted from
+      // Hoenn.png as the visual center. The original x/y remains the source
+      // Region Map coordinate and is not discarded.
+      const visualCenter = record.visualCenter;
+      const polygonCentroid = getPolygonCentroid(polygonSource);
+      if (visualCenter && Number.isFinite(Number(visualCenter.x)) && Number.isFinite(Number(visualCenter.y))){
+        stroke.x = Number(visualCenter.x) * scaleX;
+        stroke.y = Number(visualCenter.y) * scaleY;
+      } else if (polygonCentroid){
+        stroke.x = polygonCentroid.x * scaleX;
+        stroke.y = polygonCentroid.y * scaleY;
+      } else {
+        stroke.x = Number(record.x) * scaleX;
+        stroke.y = Number(record.y) * scaleY;
+      }
+
+      // Keep legacy areas only as a fallback when no polygon geometry exists.
+      const areaPolygons = polygonPoints.length >= 3
+        ? []
+        : (Array.isArray(record.areas)
+            ? record.areas
+                .map(area => Array.isArray(area?.points) ? area.points : null)
+                .filter(points => points && points.length >= 3)
+                .map(points => points.map(p => ({
+                  x: Number(p.x) * scaleX,
+                  y: Number(p.y) * scaleY
+                })).filter(p => Number.isFinite(p.x) && Number.isFinite(p.y)))
+                .filter(points => points.length >= 3)
+            : []);
+
+      return { ...stroke, polygonPoints, polygonSource, areaPolygons };
+    }
+  }
+
   const isSeviiRecord =
     String(record.coordinateSystem || '').startsWith('sevii_') ||
     String(record.geometry || '').startsWith('sevii_') ||
     record.markerType === 'island' ||
     !!record.mapView;
 
-  /*
-   * IMPORTANTE:
-   * La geometría calibrada tiene prioridad sobre CUSTOM_SEVII_1_3_AREAS.
-   * Antes ocurría al revés y las ubicaciones 1–3 podían terminar usando
-   * coordenadas antiguas de la imagen 900×600.
-   */
   if (isSeviiRecord){
     const master = getRecordGeometry(record);
 
@@ -2229,8 +2708,6 @@ function createHabitatStroke(record){
       return buildHabitatStroke(master, 'sevii_image_area');
     }
 
-    // Si no existe calibración para esa ubicación, no inventamos
-    // una coordenada. Solo mantenemos el fallback histórico de 1–3.
     const custom = getCustomSeviiArea(record);
     if (custom){
       const kx = 960 / 900;
@@ -2264,7 +2741,7 @@ function createHabitatStroke(record){
 
   return buildHabitatStroke(
     { x: left, y: top, width, height },
-    record.geometry || 'habitat_area'
+    record.geometry || (isHoennRecord ? 'hoenn_region_map_area' : 'habitat_area')
   );
 }
 
@@ -2294,12 +2771,22 @@ placeCoordBtn.onclick = async () => {
 
     redrawStrokes();
 
+    const selectedIsHoenn =
+      String(selectedRecord.coordinateSystem || '').toLowerCase().startsWith('hoenn_') ||
+      String(selectedRecord.geometry || '').toLowerCase().startsWith('hoenn_') ||
+      selectedRecord.region === 'Hoenn';
+    const selectedMapWidth = selectedIsHoenn ? 1536 : 960;
+    const selectedMapHeight = selectedIsHoenn ? 1024 : 640;
+
     coordsStatus.textContent =
       `${selectedRecord.location} marcada: ` +
       `${selectedRecord.geometry}, ` +
+      (Array.isArray(selectedRecord.polygonPoints) ? 'polígono visual calibrado · ' : '') +
       `${selectedRecord.width}×${selectedRecord.height}px ` +
-      `centrada en (${selectedRecord.x}, ${selectedRecord.y}) ` +
-      `del mapa 960×640. ` +
+      (selectedRecord.visualCenter
+        ? `centro visual (${selectedRecord.visualCenter.x}, ${selectedRecord.visualCenter.y}) · `
+        : `centrada en (${selectedRecord.x}, ${selectedRecord.y}) · `) +
+      `mapa fuente ${selectedMapWidth}×${selectedMapHeight}. ` +
       `Mapa: ${mapNameInput.value}`;
 
     coordsStatus.className = 'status ok';
@@ -2566,6 +3053,35 @@ let dragInitialPoints = null;
 
 function getBBox(s){
   if (s.type === 'habitat'){
+    if (Array.isArray(s.habitatPolygons) && s.habitatPolygons.length){
+      const all = s.habitatPolygons.flat();
+      const xs = all.map(p => p.x), ys = all.map(p => p.y);
+      return {
+        minX: Math.min(...xs), maxX: Math.max(...xs),
+        minY: Math.min(...ys), maxY: Math.max(...ys)
+      };
+    }
+    if (Array.isArray(s.polygonPoints) && s.polygonPoints.length >= 3){
+      const xs = s.polygonPoints.map(p => p.x);
+      const ys = s.polygonPoints.map(p => p.y);
+      return {
+        minX: Math.min(...xs),
+        maxX: Math.max(...xs),
+        minY: Math.min(...ys),
+        maxY: Math.max(...ys)
+      };
+    }
+    if (Array.isArray(s.areaPolygons) && s.areaPolygons.length){
+      const all = s.areaPolygons.flat();
+      const xs = all.map(p => p.x);
+      const ys = all.map(p => p.y);
+      return {
+        minX: Math.min(...xs),
+        maxX: Math.max(...xs),
+        minY: Math.min(...ys),
+        maxY: Math.max(...ys)
+      };
+    }
     return {
       minX: s.x - s.width / 2,
       maxX: s.x + s.width / 2,
@@ -2693,7 +3209,16 @@ function startDraw(e){
       draw.classList.add('dragging');
       dragOffset = pos;
       dragInitialPoints = hit.type === 'habitat'
-        ? { x: hit.x, y: hit.y }
+        ? {
+            x: hit.x,
+            y: hit.y,
+            polygonPoints: Array.isArray(hit.polygonPoints)
+              ? hit.polygonPoints.map(p => ({ x: p.x, y: p.y }))
+              : null,
+            areaPolygons: Array.isArray(hit.areaPolygons)
+              ? hit.areaPolygons.map(poly => poly.map(p => ({ x:p.x, y:p.y })))
+              : null
+          }
         : hit.points.map(p => ({ x: p.x, y: p.y }));
     }
 
@@ -2800,6 +3325,18 @@ function moveDraw(e){
     if (selectedStroke.type === 'habitat'){
       selectedStroke.x = dragInitialPoints.x + dx;
       selectedStroke.y = dragInitialPoints.y + dy;
+      if (Array.isArray(selectedStroke.polygonPoints) && Array.isArray(dragInitialPoints.polygonPoints)){
+        selectedStroke.polygonPoints = dragInitialPoints.polygonPoints.map(p => ({
+          x: p.x + dx,
+          y: p.y + dy
+        }));
+      }
+      if (Array.isArray(selectedStroke.areaPolygons) && Array.isArray(dragInitialPoints.areaPolygons)){
+        selectedStroke.areaPolygons = dragInitialPoints.areaPolygons.map(poly => poly.map(p => ({
+          x: p.x + dx,
+          y: p.y + dy
+        })));
+      }
     } else {
       selectedStroke.points = dragInitialPoints.map(p => ({
         x: p.x + dx,
@@ -2884,9 +3421,39 @@ function drawStroke(ctx, s){
     // CSV geometry:
     // - region_map_area: fill the complete region-map area.
     // - habitat_marker_anchor: use the circular habitat marker anchor.
+    // - hoenn_habitat_polygon: follow the actual visual shape stored in JSON.
     ctx.beginPath();
 
-    if (s.geometry === 'habitat_marker_anchor' || s.markerType === 'circular'){
+    // ROM-derived habitatPolygons are authoritative for encounter geometry.
+    // polygonPoints is the route-level fallback.
+    if (Array.isArray(s.habitatPolygons) && s.habitatPolygons.length){
+      for (const poly of s.habitatPolygons){
+        if (!Array.isArray(poly) || poly.length < 3) continue;
+        ctx.moveTo(poly[0].x, poly[0].y);
+        for (let i = 1; i < poly.length; i++) ctx.lineTo(poly[i].x, poly[i].y);
+        ctx.closePath();
+      }
+    } else if (Array.isArray(s.habitatPolygons) && s.habitatPolygons.length){
+      for (const poly of s.habitatPolygons){
+        if (!Array.isArray(poly) || poly.length < 3) continue;
+        ctx.moveTo(poly[0].x, poly[0].y);
+        for (let i = 1; i < poly.length; i++) ctx.lineTo(poly[i].x, poly[i].y);
+        ctx.closePath();
+      }
+    } else if (Array.isArray(s.polygonPoints) && s.polygonPoints.length >= 3){
+      ctx.moveTo(s.polygonPoints[0].x, s.polygonPoints[0].y);
+      for (let i = 1; i < s.polygonPoints.length; i++){
+        ctx.lineTo(s.polygonPoints[i].x, s.polygonPoints[i].y);
+      }
+      ctx.closePath();
+    } else if (Array.isArray(s.areaPolygons) && s.areaPolygons.length){
+      for (const poly of s.areaPolygons){
+        if (!Array.isArray(poly) || poly.length < 3) continue;
+        ctx.moveTo(poly[0].x, poly[0].y);
+        for (let i = 1; i < poly.length; i++) ctx.lineTo(poly[i].x, poly[i].y);
+        ctx.closePath();
+      }
+    } else if (s.geometry === 'habitat_marker_anchor' || s.markerType === 'circular'){
       ctx.ellipse(
         s.x,
         s.y,
