@@ -61,11 +61,9 @@ const getAllPokemonMap = async (req, res) => {
 const getPokemonMapbyDexNumber = async (req, res) => {
   try {
     const { dexNumber } = req.params;
-    const { mapName } = req.body;
 
     const result = await pokemonService.getPokemonMapByDexNumber(
       Number(dexNumber),
-      mapName,
     );
     res.status(200).json(result);
   } catch (error) {

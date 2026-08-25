@@ -93,11 +93,8 @@ const getAllPokemonMap = async () => {
   return result;
 };
 
-const getPokemonMapByDexNumber = async (dexNumber, mapName) => {
-  const result = await pokemonRepository.getPokemonMapByDexNumber(
-    dexNumber,
-    mapName,
-  );
+const getPokemonMapByDexNumber = async dexNumber => {
+  const result = await pokemonRepository.getPokemonMapByDexNumber(dexNumber);
   return result;
 };
 

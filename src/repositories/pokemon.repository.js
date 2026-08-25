@@ -136,7 +136,7 @@ const getAllPokemonMap = async () => {
   return data;
 };
 
-const getPokemonMapByDexNumber = async (dexNumber, mapName) => {
+const getPokemonMapByDexNumber = async dexNumber => {
   const { data, error } = await supabase
     .from('pokemon')
     .select(
@@ -155,7 +155,6 @@ const getPokemonMapByDexNumber = async (dexNumber, mapName) => {
         `,
     )
     .eq('dex_number', dexNumber)
-    .eq('pokemon_maps.map_name', mapName)
     .single();
 
   if (error) {
