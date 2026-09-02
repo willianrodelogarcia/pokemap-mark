@@ -1,12 +1,25 @@
 CREATE TABLE pokemon (
-    id BIGSERIAL PRIMARY KEY,
-    dex_number INTEGER NOT NULL UNIQUE,
-    name VARCHAR(100) NOT NULL UNIQUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  id bigserial not null,
+  dex_number integer not null,
+  name character varying(100) not null,
+  created_at timestamp with time zone not null default now(),
 
-    CONSTRAINT pokemon_dex_positive
-        CHECK (dex_number > 0)
-);
+  pokemon_sprite_gif text null,
+  pokemon_sprite text null,
+  pokemon_sprite_official_artwork text null,
+  pokemon_sprite_shiny text null,
+
+  pokemon_types text[] null,
+  pokemon_description text null,
+
+  height integer null,
+  weight integer null,
+
+  constraint pokemon_pkey primary key (id),
+  constraint pokemon_dex_number_key unique (dex_number),
+  constraint pokemon_name_key unique (name),
+  constraint pokemon_dex_positive check ((dex_number > 0))
+) TABLESPACE pg_default;
 
 
 CREATE TABLE pokemon_maps (

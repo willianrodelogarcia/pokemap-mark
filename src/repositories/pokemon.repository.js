@@ -35,6 +35,16 @@ const getPokemonApiPage = async ({ limit, offset }) => {
   return data;
 };
 
+const getPokemonApiDetails = async url => {
+  const { data } = await axios.get(url, { timeout: 30000 });
+  return data;
+};
+
+const getPokemonSpeciesByUrl = async url => {
+  const { data } = await axios.get(url, { timeout: 30000 });
+  return data;
+};
+
 const createPokemonDb = async pokemon => {
   const { dexNumber, name } = pokemon;
   const { data, error } = await supabase
@@ -44,6 +54,8 @@ const createPokemonDb = async pokemon => {
       name,
       pokemon_sprite_gif: `https://github.com/WillianRodelo/SpriteApi/blob/master/pokemon/${name}.gif?raw=true`,
       pokemon_sprite: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${dexNumber}.png`,
+      pokemon_sprite_official_artwork: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${dexNumber}.png`,
+      pokemon_sprite_shiny: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/${dexNumber}.png`,
     })
     .select()
     .single();
@@ -121,6 +133,12 @@ const getAllPokemonMap = async () => {
             name,
             pokemon_sprite_gif,
             pokemon_sprite,
+            pokemon_sprite_official_artwork,
+            pokemon_sprite_shiny,
+            pokemon_types,
+            pokemon_description,
+            height,
+            weight,
             pokemon_maps (
                 id,
                 pokemon_id,
@@ -185,6 +203,8 @@ const getPokemonSpecies = async nameOrId => {
 module.exports = {
   getPokemonApi,
   getPokemonApiPage,
+  getPokemonApiDetails,
+  getPokemonSpeciesByUrl,
   createPokemonDb,
   createPokemonMap,
   getAllPokemonDb,

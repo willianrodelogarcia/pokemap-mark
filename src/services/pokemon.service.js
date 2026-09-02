@@ -21,13 +21,56 @@ const getAllPokemonDb = async () => {
   return result;
 };
 
-const parseDexNumber = url => {
-  const match = url.match(/\/pokemon\/(\d+)\/?$/);
-  if (!match) {
-    throw new Error(`No se pudo obtener el número de Pokédex desde: ${url}`);
-  }
+const getDescription = species => {
+  const entries = species.flavor_text_entries || [];
+  const entry =
+    entries.find(({ language }) => language.name === 'es') ||
+    entries.find(({ language }) => language.name === 'en');
 
-  return Number(match[1]);
+  return entry ? entry.flavor_text.replace(/[\n\f\r]+/g, ' ').trim() : null;
+};
+
+const mapPokemonApiData = async ({ name, url }) => {
+  const details = await pokemonRepository.getPokemonApiDetails(url);
+  const species = await pokemonRepository.getPokemonSpeciesByUrl(
+    details.species.url,
+  );
+  const dexNumber = details.id;
+
+  return {
+    dex_number: dexNumber,
+    name,
+    pokemon_sprite_gif: `https://github.com/WillianRodelo/SpriteApi/blob/master/pokemon/${name}.gif?raw=true`,
+    pokemon_sprite:
+      details.sprites.front_default ||
+      `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${dexNumber}.png`,
+    pokemon_sprite_official_artwork:
+      details.sprites.other?.['official-artwork']?.front_default || null,
+    pokemon_sprite_shiny: details.sprites.front_shiny || null,
+    pokemon_types: details.types
+      .sort((first, second) => first.slot - second.slot)
+      .map(({ type }) => type.name),
+    pokemon_description: getDescription(species),
+    height: details.height,
+    weight: details.weight,
+  };
+};
+
+const mapWithConcurrency = async (items, limit, callback) => {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+
+  const worker = async () => {
+    while (nextIndex < items.length) {
+      const currentIndex = nextIndex++;
+      results[currentIndex] = await callback(items[currentIndex]);
+    }
+  };
+
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, worker),
+  );
+  return results;
 };
 
 const syncPokemonDb = async ({ limit, offset = 0, batchSize = 100 } = {}) => {
@@ -67,12 +110,7 @@ const syncPokemonDb = async ({ limit, offset = 0, batchSize = 100 } = {}) => {
   while (synced < total) {
     const remaining = total - synced;
     const results = page.results.slice(0, remaining);
-    const pokemon = results.map(({ name, url }) => ({
-      dex_number: parseDexNumber(url),
-      name,
-      pokemon_sprite_gif: `https://github.com/WillianRodelo/SpriteApi/blob/master/pokemon/${name}.gif?raw=true`,
-      pokemon_sprite: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${parseDexNumber(url)}.png`,
-    }));
+    const pokemon = await mapWithConcurrency(results, 10, mapPokemonApiData);
 
     await pokemonRepository.upsertPokemonDb(pokemon);
     synced += pokemon.length;
