@@ -164,6 +164,12 @@ const getPokemonMapByDexNumber = async dexNumber => {
             name,
             pokemon_sprite_gif,
             pokemon_sprite,
+            pokemon_sprite_official_artwork,
+            pokemon_sprite_shiny,
+            pokemon_types,
+            pokemon_description,
+            height,
+            weight,
             pokemon_maps (
                 id,
                 pokemon_id,
