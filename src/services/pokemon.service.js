@@ -73,11 +73,6 @@ const mapWithConcurrency = async (items, limit, callback) => {
   return results;
 };
 
-const toPokemonMapResponse = ({ pokemon_maps, ...pokemon }) => ({
-  ...pokemon,
-  pokemon_map: pokemon_maps?.[0] || null,
-});
-
 const syncPokemonDb = async ({ limit, offset = 0, batchSize = 100 } = {}) => {
   const normalizedOffset = Number(offset);
   const normalizedLimit = limit === undefined ? undefined : Number(limit);
@@ -133,12 +128,12 @@ const syncPokemonDb = async ({ limit, offset = 0, batchSize = 100 } = {}) => {
 
 const getAllPokemonMap = async () => {
   const result = await pokemonRepository.getAllPokemonMap();
-  return result.map(toPokemonMapResponse);
+  return result;
 };
 
 const getPokemonMapByDexNumber = async dexNumber => {
   const result = await pokemonRepository.getPokemonMapByDexNumber(dexNumber);
-  return toPokemonMapResponse(result);
+  return result;
 };
 
 const getPokemonSpecies = async pokemon => {
