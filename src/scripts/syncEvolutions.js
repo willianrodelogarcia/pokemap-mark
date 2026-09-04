@@ -112,7 +112,7 @@ async function syncPokemonChain(
   const isRegionalForm = pokemonData.is_default === false;
   const rootName = isRegionalForm
     ? findRegionalRootName(rawChain.chain, pokemon.name)
-    : pokemon.name;
+    : rawChain.chain.species.name;
   const processedKey = `${chainId}:${isRegionalForm ? rootName : 'default'}`;
 
   if (processedChains.has(processedKey)) return;
@@ -143,21 +143,49 @@ async function syncPokemonChain(
   console.log(`✔ Sincronizada cadena de "${species.name}" (chain ${chainId})`);
 }
 
+async function getAllPokemonRows() {
+  const pageSize = 1000;
+  const pokemonRows = [];
+  let offset = 0;
+
+  while (true) {
+    const { data, error } = await supabase
+      .from('pokemon')
+      .select('id, dex_number, name')
+      .order('dex_number', { ascending: true })
+      .range(offset, offset + pageSize - 1);
+    if (error) throw error;
+
+    pokemonRows.push(...data);
+    if (data.length < pageSize) return pokemonRows;
+
+    offset += pageSize;
+  }
+}
+
 async function run() {
   const processedChains = new Set();
   const evolutionChainsByUrl = new Map();
+  const regionalOnly = process.argv.includes('--regional');
 
-  // Trae todos los ids que ya tienes en tu tabla "pokemon"
-  const { data: pokemonRows, error } = await supabase
-    .from('pokemon')
-    .select('id, dex_number, name');
-  if (error) throw error;
+  const pokemonRows = await getAllPokemonRows();
 
   const pokemonIdByName = new Map(
     pokemonRows.map(({ id, name }) => [name, id]),
   );
+  const pokemonToSync = regionalOnly
+    ? pokemonRows.filter(({ name }) =>
+        /-(alola|galar|hisui|paldea)(?:-|$)/.test(name),
+      )
+    : pokemonRows;
 
-  for (const pokemon of pokemonRows) {
+  if (regionalOnly) {
+    console.log(
+      `Sincronizando ${pokemonToSync.length} formas regionales...`,
+    );
+  }
+
+  for (const pokemon of pokemonToSync) {
     try {
       await syncPokemonChain(
         pokemon,

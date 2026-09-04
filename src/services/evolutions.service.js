@@ -33,9 +33,13 @@ function buildChainTree(chainId, chainRows) {
   const pokemonById = buildPokemonMap(chainRows);
   const rootId = findRootId(chainRows);
 
-  function buildNode(id) {
+  function buildNode(id, ancestors = new Set()) {
     const info = pokemonById[id] || {};
-    const children = chainRows.filter(r => r.from_pokemon_id === id);
+    const nextAncestors = new Set(ancestors);
+    nextAncestors.add(id);
+    const children = chainRows.filter(
+      r => r.from_pokemon_id === id && !nextAncestors.has(r.to_pokemon_id),
+    );
     return {
       pokemon_id: id,
       dex_number: info.dex_number,
@@ -44,7 +48,7 @@ function buildChainTree(chainId, chainRows) {
       evolves_to: children.map(c => ({
         stage: c.stage,
         methods: c.methods,
-        ...buildNode(c.to_pokemon_id),
+        ...buildNode(c.to_pokemon_id, nextAncestors),
       })),
     };
   }
@@ -108,11 +112,30 @@ async function getDirectEvolutions(pokemonId) {
 }
 
 async function getEvolutionChain(pokemonId) {
-  const chainId = await evolutionsRepository.findChainIdForPokemon(pokemonId);
+  let resolvedPokemonId = pokemonId;
+  let chainId = await evolutionsRepository.findChainIdForPokemon(
+    resolvedPokemonId,
+  );
+
+  // Las formas regionales usan IDs internos distintos de su número de Pokédex
+  // (por ejemplo, rattata-alola: id 2071, dex_number 10091).
+  if (chainId === null) {
+    const pokemonIdByDexNumber =
+      await evolutionsRepository.findPokemonIdByDexNumber(pokemonId);
+    if (pokemonIdByDexNumber === null) return null;
+
+    resolvedPokemonId = pokemonIdByDexNumber;
+    chainId = await evolutionsRepository.findChainIdForPokemon(
+      resolvedPokemonId,
+    );
+  }
   if (chainId === null) return null;
 
   const chainRows = await evolutionsRepository.findByChainId(chainId);
-  const component = getConnectedEvolutionComponent(chainRows, pokemonId);
+  const component = getConnectedEvolutionComponent(
+    chainRows,
+    resolvedPokemonId,
+  );
   return buildChainTree(chainId, component);
 }
 

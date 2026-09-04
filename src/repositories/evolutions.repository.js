@@ -43,6 +43,17 @@ async function findChainIdForPokemon(pokemonId) {
   return data && data.length > 0 ? data[0].evolution_chain_id : null;
 }
 
+async function findPokemonIdByDexNumber(dexNumber) {
+  const { data, error } = await supabase
+    .from('pokemon')
+    .select('id')
+    .eq('dex_number', dexNumber)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data ? data.id : null;
+}
+
 async function findByChainId(chainId) {
   const { data, error } = await supabase
     .from(TABLE)
@@ -102,6 +113,7 @@ module.exports = {
   findAll,
   findByFromPokemonId,
   findChainIdForPokemon,
+  findPokemonIdByDexNumber,
   findByChainId,
   insert,
   findDistinctChainIds,
