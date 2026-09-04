@@ -55,6 +55,31 @@ function buildChainTree(chainId, chainRows) {
   };
 }
 
+function getConnectedEvolutionComponent(chainRows, pokemonId) {
+  const pokemonIds = new Set([pokemonId]);
+  let changed = true;
+
+  while (changed) {
+    changed = false;
+    for (const row of chainRows) {
+      if (
+        pokemonIds.has(row.from_pokemon_id) ||
+        pokemonIds.has(row.to_pokemon_id)
+      ) {
+        const sizeBefore = pokemonIds.size;
+        pokemonIds.add(row.from_pokemon_id);
+        pokemonIds.add(row.to_pokemon_id);
+        changed ||= pokemonIds.size !== sizeBefore;
+      }
+    }
+  }
+
+  return chainRows.filter(
+    row =>
+      pokemonIds.has(row.from_pokemon_id) || pokemonIds.has(row.to_pokemon_id),
+  );
+}
+
 async function listEvolutions({ limit, offset }) {
   const allChainIds = await evolutionsRepository.findDistinctChainIds();
   const pageChainIds = allChainIds.slice(offset, offset + limit);
@@ -87,7 +112,8 @@ async function getEvolutionChain(pokemonId) {
   if (chainId === null) return null;
 
   const chainRows = await evolutionsRepository.findByChainId(chainId);
-  return buildChainTree(chainId, chainRows);
+  const component = getConnectedEvolutionComponent(chainRows, pokemonId);
+  return buildChainTree(chainId, component);
 }
 
 async function createEvolution(payload) {

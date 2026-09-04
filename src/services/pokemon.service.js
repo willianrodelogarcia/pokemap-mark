@@ -1,4 +1,4 @@
-const { pokemonRepository } = require('../repositories');
+const { pokemonRepository, evolutionsRepository } = require('../repositories');
 const { buildChain } = require('../utils/evolutionParser');
 
 const getPokemonData = async () => {
@@ -126,9 +126,37 @@ const syncPokemonDb = async ({ limit, offset = 0, batchSize = 100 } = {}) => {
   return { synced, available, offset: normalizedOffset };
 };
 
-const getAllPokemonMap = async () => {
-  const result = await pokemonRepository.getAllPokemonMap();
-  return result;
+const getAllPokemonMap = async ({ limit, offset } = {}) => {
+  const hasPagination = limit !== undefined || offset !== undefined;
+
+  if (!hasPagination) {
+    const { data, count } = await pokemonRepository.getAllPokemonMap({});
+    return { data, count, limit: null, offset: null };
+  }
+
+  const normalizedLimit = limit === undefined ? 100 : Number(limit);
+  const normalizedOffset = offset === undefined ? 0 : Number(offset);
+
+  if (
+    !Number.isInteger(normalizedLimit) ||
+    normalizedLimit < 1 ||
+    normalizedLimit > 1000
+  ) {
+    const error = new Error('limit debe ser un entero entre 1 y 1000');
+    error.status = 400;
+    throw error;
+  }
+  if (!Number.isInteger(normalizedOffset) || normalizedOffset < 0) {
+    const error = new Error('offset debe ser un entero mayor o igual a 0');
+    error.status = 400;
+    throw error;
+  }
+
+  const { data, count } = await pokemonRepository.getAllPokemonMap({
+    limit: normalizedLimit,
+    offset: normalizedOffset,
+  });
+  return { data, count, limit: normalizedLimit, offset: normalizedOffset };
 };
 
 const getPokemonMapByDexNumber = async dexNumber => {
@@ -141,8 +169,18 @@ const getPokemonSpecies = async pokemon => {
   return result;
 };
 
+const getPokemonByName = async pokemon => {
+  const result = await pokemonRepository.getPokemonByName(pokemon);
+  return result;
+};
+
+const getPokemonSpeciesByUrl = async url => {
+  const result = await pokemonRepository.getPokemonSpeciesByUrl(url);
+  return result;
+};
+
 const getEvolutionChainByUrl = async url => {
-  const result = await pokemonRepository.getEvolutionChainByUrl(url);
+  const result = await evolutionsRepository.getEvolutionChainByUrl(url);
   return result;
 };
 
@@ -169,6 +207,8 @@ module.exports = {
   getAllPokemonMap,
   getPokemonMapByDexNumber,
   getPokemonSpecies,
+  getPokemonByName,
+  getPokemonSpeciesByUrl,
   getEvolutionChainByUrl,
   getAllEvolutionChainDb,
 };

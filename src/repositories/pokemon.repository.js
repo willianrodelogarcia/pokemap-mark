@@ -123,10 +123,9 @@ const getPokemonDbByDexNumber = async dexNumber => {
   return data;
 };
 
-const getAllPokemonMap = async () => {
-  const { data, error } = await supabase
-    .from('pokemon')
-    .select(
+const getAllPokemonMap = async ({ limit, offset }) => {
+  const selectPokemon = () =>
+    supabase.from('pokemon').select(
       `
             id,
             dex_number,
@@ -146,12 +145,41 @@ const getAllPokemonMap = async () => {
                 map_name
             )
         `,
-    )
-    .order('dex_number', { ascending: true });
+      { count: 'exact' },
+    );
+
+  if (limit === undefined) {
+    const pageSize = 1000;
+    const pokemon = [];
+    let pageOffset = 0;
+    let count = 0;
+
+    while (true) {
+      const { data, error, count: total } = await selectPokemon()
+        .order('dex_number', { ascending: true })
+        .range(pageOffset, pageOffset + pageSize - 1);
+
+      if (error) throw new Error(error.message);
+
+      pokemon.push(...data);
+      count = total;
+      if (data.length < pageSize) break;
+
+      pageOffset += pageSize;
+    }
+
+    return { data: pokemon, count };
+  }
+
+  const { data, error, count } = await selectPokemon()
+    .order('dex_number', { ascending: true })
+    .range(offset, offset + limit - 1);
+
   if (error) {
     throw new Error(error.message);
   }
-  return data;
+
+  return { data, count };
 };
 
 const getPokemonMapByDexNumber = async dexNumber => {
@@ -206,6 +234,13 @@ const getPokemonSpecies = async nameOrId => {
   }
 };
 
+const getPokemonByName = async nameOrId => {
+  const url = getPokemonApiUrl();
+  const normalized = String(nameOrId).toLowerCase().trim();
+  const { data } = await axios.get(`${url}/${normalized}`);
+  return data;
+};
+
 module.exports = {
   getPokemonApi,
   getPokemonApiPage,
@@ -219,4 +254,5 @@ module.exports = {
   getAllPokemonMap,
   getPokemonMapByDexNumber,
   getPokemonSpecies,
+  getPokemonByName,
 };
