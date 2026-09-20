@@ -790,6 +790,7 @@
       <div class="field" style="max-width:160px;">
         <label for="pokedexIdInput">Número de Pokédex</label>
         <input type="number" id="pokedexIdInput" min="1" placeholder="ej. 25" autocomplete="off">
+        <span class="hint">Escríbelo antes de generar para nombrar el GIF como <code>25.gif</code>.</span>
       </div>
       <div class="field" style="justify-content:flex-end; flex:0;">
         <button class="secondary" id="addPokemonBtn" style="margin-top:auto;">Añadir</button>
@@ -3565,10 +3566,13 @@ downloadBtn.onclick = () => {
 };
 
 // --- Optional/advanced: upload the base image alone, to avoid re-uploading it during iteration ---
-function uploadImageToCloudinary(source, cloudName, uploadPreset, folder){
+function uploadImageToCloudinary(source, cloudName, uploadPreset, folder, publicId){
   const formData = new FormData();
   formData.append('file', source);
   formData.append('upload_preset', uploadPreset);
+  if (publicId){
+    formData.append('public_id', publicId);
+  }
   if (folder){
     // Cloudinary accounts on "Dynamic Folder Mode" (the current default for new
     // accounts) expect `asset_folder`, not the legacy `folder` param. Sending
@@ -3688,6 +3692,10 @@ generateGifBtn.onclick = async () => {
   const cloudName = cloudNameInput.value.trim();
   const uploadPreset = uploadPresetInput.value.trim();
   const gifFolder = gifFolderInput.value.trim();
+  const gifPokemonId = parseInt(pokedexIdInput.value.trim(), 10);
+  const gifPublicId = Number.isInteger(gifPokemonId) && gifPokemonId > 0
+    ? String(gifPokemonId)
+    : '';
   resultUrl.style.display = 'none';
   gifPreview.style.display = 'none';
   progress.style.display = 'none';
@@ -3711,7 +3719,13 @@ generateGifBtn.onclick = async () => {
     setStatus('Generando GIF…');
     const blob = await generateGif();
     setStatus('Subiendo GIF a Cloudinary…');
-    const data = await uploadImageToCloudinary(blob, cloudName, uploadPreset, gifFolder);
+    const data = await uploadImageToCloudinary(
+      blob,
+      cloudName,
+      uploadPreset,
+      gifFolder,
+      gifPublicId
+    );
     uploadedMapUrl = data.secure_url;
     gifAsset = { publicId: data.public_id, secureUrl: data.secure_url, width: data.width, height: data.height };
     resultUrl.style.display = 'block';
