@@ -2336,6 +2336,7 @@ csvPokemonBothSelect.addEventListener('change', () => {
   const name = csvPokemonBothSelect.value;
   if (!name) return;
 
+  clearMarksOnPokemonChange(true);
   setSelectedPokemon(
     name,
     getSelectedGameVersion()
@@ -2352,6 +2353,7 @@ csvPokemonExclusiveSelect.addEventListener('change', () => {
   if (separator < 0) return;
   const version = value.slice(0, separator);
   const name = value.slice(separator + 1);
+  clearMarksOnPokemonChange(true);
   setSelectedPokemon(name, version);
   csvPokemonBothSelect.value = '';
 });
