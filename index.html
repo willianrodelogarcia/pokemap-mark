@@ -1331,7 +1331,7 @@ async function loadPokedex(){
 
     const result = await response.json();
 
-    pokedexPokemon = Array.isArray(result) ? result : [];
+    pokedexPokemon = Array.isArray(result.data) ? result.data : [];
 
     renderPokedex();
 

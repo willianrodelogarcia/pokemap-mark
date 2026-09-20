@@ -1,8 +1,6 @@
 const supabase = require('../config/supabase');
 const pokeApiService = require('../services/pokemon.service');
-const {
-  describeEvolutionDetail,
-} = require('../utils/evolutionParser');
+const { describeEvolutionDetail } = require('../utils/evolutionParser');
 
 function collectEvolutionRows(
   chainLink,
@@ -16,17 +14,19 @@ function collectEvolutionRows(
 
   for (const nextLink of chainLink.evolves_to) {
     const matchingDetails = nextLink.evolution_details.filter(detail =>
-      detail.base_form
-        ? isRegionalForm && detail.base_form.name === fromName
+      detail.required_pokemon_form || detail.base_form
+        ? isRegionalForm &&
+          (detail.required_pokemon_form || detail.base_form).name === fromName
         : !isRegionalForm,
     );
     const detailsByTarget = new Map();
 
     for (const detail of matchingDetails) {
-      const toName = detail.evolved_form?.name || nextLink.species.name;
+      const evolvedForm = detail.evolved_pokemon_form || detail.evolved_form;
+      const toName = evolvedForm?.name || nextLink.species.name;
       const target = detailsByTarget.get(toName) || {
         methods: [],
-        isRegionalForm: Boolean(detail.evolved_form),
+        isRegionalForm: Boolean(evolvedForm),
       };
       target.methods.push(describeEvolutionDetail(detail));
       detailsByTarget.set(toName, target);
@@ -72,10 +72,12 @@ function findRegionalRootName(chainLink, pokemonName) {
   function visit(link) {
     for (const nextLink of link.evolves_to) {
       for (const detail of nextLink.evolution_details) {
-        if (detail.base_form) {
-          const evolvedName =
-            detail.evolved_form?.name || nextLink.species.name;
-          parentByForm.set(evolvedName, detail.base_form.name);
+        const requiredForm = detail.required_pokemon_form || detail.base_form;
+        if (requiredForm) {
+          const evolvedForm =
+            detail.evolved_pokemon_form || detail.evolved_form;
+          const evolvedName = evolvedForm?.name || nextLink.species.name;
+          parentByForm.set(evolvedName, requiredForm.name);
         }
       }
       visit(nextLink);
@@ -126,6 +128,20 @@ async function syncPokemonChain(
     1,
     isRegionalForm,
   );
+
+  const sourceIds = [
+    ...new Set(evolutionRows.map(row => row.from_pokemon_id).filter(Boolean)),
+  ];
+
+  if (sourceIds.length > 0) {
+    const { error: deleteError } = await supabase
+      .from('evolutions')
+      .delete()
+      .eq('evolution_chain_id', chainId)
+      .in('from_pokemon_id', sourceIds);
+
+    if (deleteError) throw deleteError;
+  }
 
   if (evolutionRows.length === 0) {
     console.log(
@@ -180,9 +196,7 @@ async function run() {
     : pokemonRows;
 
   if (regionalOnly) {
-    console.log(
-      `Sincronizando ${pokemonToSync.length} formas regionales...`,
-    );
+    console.log(`Sincronizando ${pokemonToSync.length} formas regionales...`);
   }
 
   for (const pokemon of pokemonToSync) {

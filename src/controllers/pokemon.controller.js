@@ -54,6 +54,7 @@ const getAllPokemonMap = async (req, res) => {
     const result = await pokemonService.getAllPokemonMap({
       limit: req.query.limit,
       offset: req.query.offset,
+      region: req.query.region,
     });
     res.status(200).json(result);
   } catch (error) {

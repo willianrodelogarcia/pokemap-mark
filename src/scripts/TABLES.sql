@@ -2,6 +2,7 @@ CREATE TABLE pokemon (
   id bigserial not null,
   dex_number integer not null,
   name character varying(100) not null,
+  region character varying(30) not null default 'Unknown',
   created_at timestamp with time zone not null default now(),
 
   pokemon_sprite_gif text null,
@@ -54,3 +55,9 @@ create index idx_evolutions_to on evolutions(to_pokemon_id);
 
 CREATE INDEX idx_mapas_pokemon_id
     ON pokemon_maps(pokemon_id);
+
+ALTER TABLE pokemon
+  ADD COLUMN IF NOT EXISTS region character varying(30) NOT NULL DEFAULT 'Unknown';
+
+CREATE INDEX IF NOT EXISTS idx_pokemon_region
+  ON pokemon(region);

@@ -123,13 +123,14 @@ const getPokemonDbByDexNumber = async dexNumber => {
   return data;
 };
 
-const getAllPokemonMap = async ({ limit, offset }) => {
-  const selectPokemon = () =>
-    supabase.from('pokemon').select(
+const getAllPokemonMap = async ({ limit, offset, region }) => {
+  const selectPokemon = () => {
+    let query = supabase.from('pokemon').select(
       `
             id,
             dex_number,
             name,
+            region,
             pokemon_sprite_gif,
             pokemon_sprite,
             pokemon_sprite_official_artwork,
@@ -147,6 +148,9 @@ const getAllPokemonMap = async ({ limit, offset }) => {
         `,
       { count: 'exact' },
     );
+    if (region) query = query.eq('region', region);
+    return query;
+  };
 
   if (limit === undefined) {
     const pageSize = 1000;
@@ -155,7 +159,11 @@ const getAllPokemonMap = async ({ limit, offset }) => {
     let count = 0;
 
     while (true) {
-      const { data, error, count: total } = await selectPokemon()
+      const {
+        data,
+        error,
+        count: total,
+      } = await selectPokemon()
         .order('dex_number', { ascending: true })
         .range(pageOffset, pageOffset + pageSize - 1);
 
@@ -190,6 +198,7 @@ const getPokemonMapByDexNumber = async dexNumber => {
             id,
             dex_number,
             name,
+            region,
             pokemon_sprite_gif,
             pokemon_sprite,
             pokemon_sprite_official_artwork,

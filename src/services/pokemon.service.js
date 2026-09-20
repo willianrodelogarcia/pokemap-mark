@@ -1,5 +1,5 @@
 const { pokemonRepository, evolutionsRepository } = require('../repositories');
-const { buildChain } = require('../utils/evolutionParser');
+const evolutionsService = require('./evolutions.service');
 
 const getPokemonData = async () => {
   const result = await pokemonRepository.getPokemonApi();
@@ -30,6 +30,21 @@ const getDescription = species => {
   return entry ? entry.flavor_text.replace(/[\n\f\r]+/g, ' ').trim() : null;
 };
 
+const REGION_BY_GENERATION = {
+  'generation-i': 'Kanto',
+  'generation-ii': 'Johto',
+  'generation-iii': 'Hoenn',
+  'generation-iv': 'Sinnoh',
+  'generation-v': 'Unova',
+  'generation-vi': 'Kalos',
+  'generation-vii': 'Alola',
+  'generation-viii': 'Galar',
+  'generation-ix': 'Paldea',
+};
+
+const getRegion = species =>
+  REGION_BY_GENERATION[species.generation?.name] || 'Unknown';
+
 const mapPokemonApiData = async ({ name, url }) => {
   const details = await pokemonRepository.getPokemonApiDetails(url);
   const species = await pokemonRepository.getPokemonSpeciesByUrl(
@@ -40,6 +55,7 @@ const mapPokemonApiData = async ({ name, url }) => {
   return {
     dex_number: dexNumber,
     name,
+    region: getRegion(species),
     pokemon_sprite_gif: `https://github.com/WillianRodelo/SpriteApi/blob/master/pokemon/${name}.gif?raw=true`,
     pokemon_sprite:
       details.sprites.front_default ||
@@ -126,8 +142,9 @@ const syncPokemonDb = async ({ limit, offset = 0, batchSize = 100 } = {}) => {
   return { synced, available, offset: normalizedOffset };
 };
 
-const getAllPokemonMap = async ({ limit, offset } = {}) => {
-  const hasPagination = limit !== undefined || offset !== undefined;
+const getAllPokemonMap = async ({ limit, offset, region } = {}) => {
+  const hasPagination =
+    limit !== undefined || offset !== undefined || region !== undefined;
 
   if (!hasPagination) {
     const { data, count } = await pokemonRepository.getAllPokemonMap({});
@@ -136,6 +153,13 @@ const getAllPokemonMap = async ({ limit, offset } = {}) => {
 
   const normalizedLimit = limit === undefined ? 100 : Number(limit);
   const normalizedOffset = offset === undefined ? 0 : Number(offset);
+  const normalizedRegion = region?.trim();
+
+  if (region !== undefined && !normalizedRegion) {
+    const error = new Error('region no puede estar vacío');
+    error.status = 400;
+    throw error;
+  }
 
   if (
     !Number.isInteger(normalizedLimit) ||
@@ -155,6 +179,7 @@ const getAllPokemonMap = async ({ limit, offset } = {}) => {
   const { data, count } = await pokemonRepository.getAllPokemonMap({
     limit: normalizedLimit,
     offset: normalizedOffset,
+    region: normalizedRegion,
   });
   return { data, count, limit: normalizedLimit, offset: normalizedOffset };
 };
@@ -185,17 +210,7 @@ const getEvolutionChainByUrl = async url => {
 };
 
 const getAllEvolutionChainDb = async dexNumber => {
-  const result = await pokemonRepository.getAllEvolutionChainDb(dexNumber);
-  let rootId = dexNumber;
-  let parentRow = result.find(e => e.evolves_to_id === rootId);
-  while (parentRow) {
-    rootId = parentRow.pokemon_id;
-    parentRow = result.find(e => e.evolves_to_id === rootId);
-  }
-
-  const chain = buildChain(result, rootId);
-
-  return chain;
+  return evolutionsService.getEvolutionChain(dexNumber);
 };
 
 module.exports = {
